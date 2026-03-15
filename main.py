@@ -332,7 +332,6 @@ def list_quests(
     return sb("quests", params)
 
 
-
 # =============================================================================
 # VENDORS  —  /vendor/{entry}
 # =============================================================================
@@ -393,7 +392,6 @@ def list_vendors(
     return sb("creature_protos", params)
 
 
-
 # =============================================================================
 # ZONES  —  /zone/{zoneid}
 # =============================================================================
@@ -439,7 +437,6 @@ def list_zones(
     return sb("zone_infos", params)
 
 
-
 # =============================================================================
 # PUBLIC QUESTS  —  /pq/{entry}
 # =============================================================================
@@ -464,8 +461,7 @@ def list_pqs(zone: Optional[int] = None, search: Optional[str] = None):
     params = {"select": "entry,name,level,zoneid,pinx,piny", "order": "zoneid.asc,name.asc"}
     if zone:   params["zoneid"] = f"eq.{zone}"
     if search: params["name"]   = f"ilike.*{search}*"
-    return sb("zone_infos", params)
-
+    return sb("pquest_info", params)
 
 
 # =============================================================================
@@ -517,7 +513,7 @@ def list_abilities(
     }
     if careerline is not None: params["careerline"] = f"eq.{careerline}"
     if search: params["name"] = f"ilike.*{search}*"
-    return {"page": page, "limit": limit, "data": sb("ability_infos", params)}
+    return sb("ability_infos", params)
 
 
 # =============================================================================
