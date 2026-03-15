@@ -171,7 +171,7 @@ def list_items(
     rows = sb("item_infos", params)
     for r in rows:
         r["rarity_name"] = RARITY.get(r.get("rarity", 0), "Common")
-    return {"page": page, "limit": limit, "count": len(rows), "data": rows}
+    return rows
 
 
 # =============================================================================
@@ -258,7 +258,7 @@ def list_npcs(
         }
     if search:  params["name"]    = f"ilike.*{search}*"
     if faction is not None: params["faction"] = f"eq.{faction}"
-    return {"page": page, "limit": limit, "data": sb("creature_protos", params)}
+    return sb("creature_protos", params)
 
 
 # =============================================================================
@@ -329,7 +329,8 @@ def list_quests(
     if search: params["name"]  = f"ilike.*{search}*"
     if level:  params["level"] = f"eq.{level}"
     if type:   params["type"]  = f"eq.{type}"
-    return {"page": page, "limit": limit, "data": sb("quests", params)}
+    return sb("quests", params)
+
 
 
 # =============================================================================
@@ -389,7 +390,8 @@ def list_vendors(
         "entry":  f"in.({','.join(str(e) for e in batch)})",
     }
     if search: params["name"] = f"ilike.*{search}*"
-    return {"page": page, "limit": limit, "count": len(unique_entries), "data": sb("creature_protos", params)}
+    return sb("creature_protos", params)
+
 
 
 # =============================================================================
@@ -434,7 +436,8 @@ def list_zones(
     params = {"select": "zoneid,name,minlevel,maxlevel,type,tier,region", "order": "tier.asc,name.asc"}
     if tier:   params["tier"] = f"eq.{tier}"
     if search: params["name"] = f"ilike.*{search}*"
-    return {"data": sb("zone_infos", params)}
+    return sb("zone_infos", params)
+
 
 
 # =============================================================================
@@ -461,7 +464,8 @@ def list_pqs(zone: Optional[int] = None, search: Optional[str] = None):
     params = {"select": "entry,name,level,zoneid,pinx,piny", "order": "zoneid.asc,name.asc"}
     if zone:   params["zoneid"] = f"eq.{zone}"
     if search: params["name"]   = f"ilike.*{search}*"
-    return {"data": sb("pquest_info", params)}
+    return sb("zone_infos", params)
+
 
 
 # =============================================================================
