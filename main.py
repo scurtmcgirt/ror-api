@@ -159,7 +159,7 @@ def list_items(
     search: Optional[str] = None,
 ):
     params = {
-        "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor",
+        "select": "entry,name as item_name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor",
         "limit":  str(limit),
         "offset": str((page - 1) * limit),
         "order":  "name.asc",
