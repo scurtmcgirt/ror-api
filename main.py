@@ -159,7 +159,7 @@ def list_items(
     search: Optional[str] = None,
 ):
     params = {
-        "select": "entry,name as item_name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor",
+        "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor",
         "limit":  str(limit),
         "offset": str((page - 1) * limit),
         "order":  "name.asc",
@@ -171,6 +171,7 @@ def list_items(
     rows = sb("item_infos", params)
     for r in rows:
         r["rarity_name"] = RARITY.get(r.get("rarity", 0), "Common")
+        r["item_name"] = r.pop("name", "")
     return rows
 
 
