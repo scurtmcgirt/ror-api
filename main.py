@@ -259,7 +259,10 @@ def list_npcs(
         }
     if search:  params["name"]    = f"ilike.*{search}*"
     if faction is not None: params["faction"] = f"eq.{faction}"
-    return sb("creature_protos", params)
+    rows = sb("creature_protos", params)
+    for r in rows:
+        r["npc_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
@@ -330,7 +333,10 @@ def list_quests(
     if search: params["name"]  = f"ilike.*{search}*"
     if level:  params["level"] = f"eq.{level}"
     if type:   params["type"]  = f"eq.{type}"
-    return sb("quests", params)
+    rows = sb("quests", params)
+    for r in rows:
+        r["quest_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
@@ -390,7 +396,10 @@ def list_vendors(
         "entry":  f"in.({','.join(str(e) for e in batch)})",
     }
     if search: params["name"] = f"ilike.*{search}*"
-    return sb("creature_protos", params)
+    rows = sb("creature_protos", params)
+    for r in rows:
+        r["npc_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
@@ -435,7 +444,10 @@ def list_zones(
     params = {"select": "zoneid,name,minlevel,maxlevel,type,tier,region", "order": "tier.asc,name.asc"}
     if tier:   params["tier"] = f"eq.{tier}"
     if search: params["name"] = f"ilike.*{search}*"
-    return sb("zone_infos", params)
+    rows = sb("zone_infos", params)
+    for r in rows:
+        r["zone_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
@@ -462,7 +474,10 @@ def list_pqs(zone: Optional[int] = None, search: Optional[str] = None):
     params = {"select": "entry,name,level,zoneid,pinx,piny", "order": "zoneid.asc,name.asc"}
     if zone:   params["zoneid"] = f"eq.{zone}"
     if search: params["name"]   = f"ilike.*{search}*"
-    return sb("pquest_info", params)
+    rows = sb("pquest_info", params)
+    for r in rows:
+        r["pq_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
@@ -514,7 +529,10 @@ def list_abilities(
     }
     if careerline is not None: params["careerline"] = f"eq.{careerline}"
     if search: params["name"] = f"ilike.*{search}*"
-    return sb("ability_infos", params)
+    rows = sb("ability_infos", params)
+    for r in rows:
+        r["ability_name"] = r.pop("name", "")
+    return rows
 
 
 # =============================================================================
