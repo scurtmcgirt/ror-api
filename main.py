@@ -164,12 +164,15 @@ def list_items(
         "limit":  str(limit),
         "offset": str((page - 1) * limit),
         "order":  "name.asc",
+        "name":   "neq.",
     }
     if rarity  is not None: params["rarity"]  = f"eq.{rarity}"
     if type    is not None: params["type"]    = f"eq.{type}"
     if minrank is not None: params["minrank"] = f"eq.{minrank}"
     if search:              params["name"]    = f"ilike.*{search}*"
     rows = sb("item_infos", params)
+    # Also filter out any remaining empty names in Python
+    rows = [r for r in rows if r.get("name")]
     ITEM_TYPES = {
         0:"Armor", 1:"Weapon", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
         4:"Shield", 5:"Shield", 6:"Armor", 7:"Ranged Weapon",
