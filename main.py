@@ -103,8 +103,9 @@ def parse_stats(stats_str: str) -> dict:
 # ITEMS
 # =============================================================================
 
-@app.get("/item/{entry}", tags=["Items"])
-def get_item(entry: int):
+@app.get("/item", tags=["Items"])
+def get_item_by_param(entry: int):
+    return get_item(entry)
     item = sb_one("item_infos", {"entry": f"eq.{entry}"})
     item["display_name"]  = item.pop("name", "")
     item["rarity_name"]   = RARITY.get(item.get("rarity", 0), "Common")
