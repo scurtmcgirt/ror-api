@@ -171,7 +171,7 @@ def list_items(
     rows = sb("item_infos", params)
     for r in rows:
         r["rarity_name"] = RARITY.get(r.get("rarity", 0), "Common")
-        r["ror_name"] = r.pop("name", "")
+        r["item_name"] = r.pop("name", "")
     return rows
 
 
