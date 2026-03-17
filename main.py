@@ -103,9 +103,8 @@ def parse_stats(stats_str: str) -> dict:
 # ITEMS
 # =============================================================================
 
-@app.get("/item", tags=["Items"])
-def get_item_by_param(entry: int):
-    return get_item(entry)
+@app.get("/item/{entry}", tags=["Items"])
+def get_item(entry: int):
     item = sb_one("item_infos", {"entry": f"eq.{entry}"})
     item["display_name"]  = item.pop("name", "")
     item["rarity_name"]   = RARITY.get(item.get("rarity", 0), "Common")
@@ -159,6 +158,7 @@ def list_items(
     type: Optional[int] = None,
     minrank: Optional[int] = None,
     search: Optional[str] = None,
+    entry: Optional[int] = None,
 ):
     params = {
         "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor",
@@ -171,6 +171,7 @@ def list_items(
     if type    is not None: params["type"]    = f"eq.{type}"
     if minrank is not None: params["minrank"] = f"eq.{minrank}"
     if search:              params["name"]    = f"ilike.*{search}*"
+    if entry   is not None: params["entry"]   = f"eq.{entry}"
     rows = sb("item_infos", params)
     # Also filter out any remaining empty names in Python
     rows = [r for r in rows if r.get("name")]
