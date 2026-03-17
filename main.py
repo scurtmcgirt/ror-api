@@ -164,6 +164,7 @@ def list_items(
         "limit":  str(limit),
         "offset": str((page - 1) * limit),
         "order":  "name.asc",
+        "name":   "neq.",
     }
     if rarity  is not None: params["rarity"]  = f"eq.{rarity}"
     if type    is not None: params["type"]    = f"eq.{type}"
