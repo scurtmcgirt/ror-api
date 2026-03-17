@@ -171,10 +171,31 @@ def list_items(
     if minrank is not None: params["minrank"] = f"eq.{minrank}"
     if search:              params["name"]    = f"ilike.*{search}*"
     rows = sb("item_infos", params)
-    for r in rows:
-        r["display_name"] = r.pop("name", "")
-        r["rarity_name"]  = RARITY.get(r.get("rarity", 0), "Common")
-    return rows
+ITEM_TYPES = {
+    0:"Armor", 1:"Weapon", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
+    4:"Shield", 5:"Shield", 6:"Armor", 7:"Ranged Weapon",
+    8:"Accessory", 9:"Ranged Weapon", 10:"Accessory", 11:"Staff",
+    12:"Ranged", 13:"Melee", 14:"Melee", 15:"Bag",
+    16:"Trophy", 17:"Quest Item", 18:"Crafting", 19:"Currency",
+    20:"Potion", 21:"Dye", 22:"Mount", 23:"Gather",
+    24:"Enhancement", 25:"Container",
+}
+
+ITEM_SLOTS = {
+    0:"None", 10:"Main Hand", 11:"Off Hand", 12:"Ranged",
+    13:"Melee", 14:"Melee", 15:"Head", 16:"Shoulder",
+    17:"Body", 18:"Hands", 19:"Waist", 20:"Back",
+    21:"Feet", 22:"Legs", 23:"Wrist", 24:"Neck",
+    25:"Ring", 26:"Ring", 27:"Earring", 28:"Earring",
+    29:"Pocket", 30:"Pocket", 31:"Trophy", 42:"Bag",
+}
+
+for r in rows:
+    r["display_name"] = r.pop("name", "")
+    r["rarity_name"]  = RARITY.get(r.get("rarity", 0), "Common")
+    r["type_name"]    = ITEM_TYPES.get(r.get("type", 0), f"Type {r.get('type',0)}")
+    r["slot_name"]    = ITEM_SLOTS.get(r.get("slotid", 0), f"Slot {r.get('slotid',0)}")
+return rows
 
 
 # =============================================================================
