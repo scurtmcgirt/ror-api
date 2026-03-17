@@ -1,21 +1,21 @@
 """
 =============================================================================
-Warhammer Online: Return of Reckoning  -  REST API  (v2)
+Warhammer Online: Return of Reckoning  -  REST API  (v3)
 =============================================================================
-Updated to match the actual WarDB table structure in Supabase.
+All 'name' fields renamed to avoid Bubble.io reserved word conflicts:
+  items      -> display_name
+  npcs       -> display_name
+  quests     -> display_name
+  zones      -> display_name
+  pqs        -> display_name
+  abilities  -> display_name
 
-Run locally:
-    pip install fastapi uvicorn httpx python-dotenv
-    uvicorn main:app --reload
-
-Then visit http://localhost:8000/docs for the interactive explorer.
-
-Deploy to Railway or Render (both have free tiers).
+Using a single consistent field name 'display_name' across all endpoints
+makes Bubble configuration simpler and avoids all naming conflicts.
 =============================================================================
 """
 
 import os
-import json
 import httpx
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
@@ -29,7 +29,7 @@ SUPABASE_KEY = os.environ["SUPABASE_ANON_KEY"]
 
 app = FastAPI(
     title="Warhammer Online: Return of Reckoning - Database API",
-    version="2.0.0",
+    version="3.0.0",
     description="Items, NPCs, quests, vendors, zones and more for WAR: RoR.",
 )
 
@@ -45,15 +45,16 @@ HEADERS = {
     "Authorization": f"Bearer {SUPABASE_KEY}",
 }
 
+RARITY = {0:"Common", 1:"Uncommon", 2:"Rare", 3:"Very Rare", 4:"Artifact", 5:"Sovereign"}
+REALM  = {0:"Neutral", 1:"Order", 2:"Destruction"}
+
 # ---------------------------------------------------------------------------
-# SUPABASE QUERY HELPER
+# HELPERS
 # ---------------------------------------------------------------------------
 
 def sb(table: str, params: dict = None) -> list[dict]:
-    """Query Supabase REST API and return rows."""
     url = f"{SUPABASE_URL}/rest/v1/{table}"
     p = params or {}
-    # Always request full representation
     p.setdefault("limit", "1000")
     try:
         r = httpx.get(url, headers=HEADERS, params=p, timeout=15)
@@ -69,15 +70,14 @@ def sb_one(table: str, params: dict) -> dict:
         raise HTTPException(status_code=404, detail=f"Not found in {table}")
     return rows[0]
 
-# ---------------------------------------------------------------------------
-# RARITY / TYPE LOOKUPS
-# ---------------------------------------------------------------------------
-
-RARITY = {0:"Common", 1:"Uncommon", 2:"Rare", 3:"Very Rare", 4:"Artifact", 5:"Sovereign"}
-REALM  = {0:"Neutral", 1:"Order", 2:"Destruction"}
+def rename_name(rows: list[dict]) -> list[dict]:
+    """Rename 'name' to 'display_name' to avoid Bubble reserved word conflict."""
+    for r in rows:
+        if "name" in r:
+            r["display_name"] = r.pop("name")
+    return rows
 
 def parse_stats(stats_str: str) -> dict:
-    """Parse WAR stats format: '28:50;0:0;...' into {stat_id: value}"""
     STAT_NAMES = {
         1:"Strength", 2:"Toughness", 3:"Initiative", 4:"Quickness",
         5:"Ballistic Skill", 6:"Weapon Skill", 7:"Intelligence",
@@ -94,62 +94,63 @@ def parse_stats(stats_str: str) -> dict:
             try:
                 sid, val = int(parts[0]), int(parts[1])
                 if sid > 0 and val != 0:
-                    name = STAT_NAMES.get(sid, f"Stat_{sid}")
-                    result[name] = val
+                    result[STAT_NAMES.get(sid, f"Stat_{sid}")] = val
             except ValueError:
                 pass
     return result
 
 # =============================================================================
-# ITEMS  —  /item/{entry}
+# ITEMS
 # =============================================================================
 
-@app.get("/item/{entry}", tags=["Items"], summary="Item details + who drops it + who sells it + quest rewards")
+@app.get("/item/{entry}", tags=["Items"])
 def get_item(entry: int):
     item = sb_one("item_infos", {"entry": f"eq.{entry}"})
-    item["rarity_name"] = RARITY.get(item.get("rarity", 0), "Common")
-    item["stats_parsed"] = parse_stats(item.get("stats", ""))
+    item["display_name"]  = item.pop("name", "")
+    item["rarity_name"]   = RARITY.get(item.get("rarity", 0), "Common")
+    item["stats_parsed"]  = parse_stats(item.get("stats", ""))
 
-    # NPCs that drop this item
     drops = sb("creature_loots", {"itemid": f"eq.{entry}", "select": "entry,pct"})
     drop_npcs = []
-    for d in drops[:20]:  # cap at 20
-        npc = sb("creature_protos", {"entry": f"eq.{d['entry']}", "select": "entry,name,minlevel,maxlevel,faction"})
+    for d in drops[:20]:
+        npc = sb("creature_protos", {"entry": f"eq.{d['entry']}", "select": "entry,name,minlevel,maxlevel"})
         if npc:
-            drop_npcs.append({**npc[0], "drop_chance": d.get("pct")})
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
+            drop_npcs.append({**row, "drop_chance": d.get("pct")})
 
-    # Vendors that sell this item
     vendor_rows = sb("creature_vendors", {"itemid": f"eq.{entry}", "select": "entry,price"})
     vendors = []
     for v in vendor_rows[:20]:
         npc = sb("creature_protos", {"entry": f"eq.{v['entry']}", "select": "entry,name"})
         if npc:
-            # Find where this NPC spawns
-            spawn = sb("creature_spawns", {"entry": f"eq.{v['entry']}", "select": "zoneid,worldx,worldy", "limit": "1"})
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
+            spawn = sb("creature_spawns", {"entry": f"eq.{v['entry']}", "select": "zoneid", "limit": "1"})
             zone_name = None
             if spawn:
                 zone = sb("zone_infos", {"zoneid": f"eq.{spawn[0]['zoneid']}", "select": "name"})
                 zone_name = zone[0]["name"] if zone else None
-            vendors.append({**npc[0], "price": v.get("price"), "zone": zone_name})
+            vendors.append({**row, "price": v.get("price"), "zone": zone_name})
 
-    # Quest rewards
     quest_rewards = []
     quests_data = sb("quests", {"select": "entry,name,level,xp,gold"})
     for q in quests_data:
         given  = q.get("given", "") or ""
         choice = q.get("choice", "") or ""
         if str(entry) in given or str(entry) in choice:
+            q["display_name"] = q.pop("name", "")
             quest_rewards.append(q)
 
     return {
-        "item":         item,
-        "dropped_by":   drop_npcs,
-        "sold_by":      vendors,
+        "item":          item,
+        "dropped_by":    drop_npcs,
+        "sold_by":       vendors,
         "quest_rewards": quest_rewards[:10],
     }
 
 
-@app.get("/items", tags=["Items"], summary="Browse all items")
+@app.get("/items", tags=["Items"])
 def list_items(
     page: int = 1,
     limit: int = Query(50, le=200),
@@ -170,26 +171,25 @@ def list_items(
     if search:              params["name"]    = f"ilike.*{search}*"
     rows = sb("item_infos", params)
     for r in rows:
-        r["rarity_name"] = RARITY.get(r.get("rarity", 0), "Common")
-        r["item_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
+        r["rarity_name"]  = RARITY.get(r.get("rarity", 0), "Common")
     return rows
 
 
 # =============================================================================
-# NPCs  —  /npc/{entry}
+# NPCs
 # =============================================================================
 
-@app.get("/npc/{entry}", tags=["NPCs"], summary="NPC details + spawn locations + loot + vendor items")
+@app.get("/npc/{entry}", tags=["NPCs"])
 def get_npc(entry: int):
     npc = sb_one("creature_protos", {"entry": f"eq.{entry}"})
+    npc["display_name"] = npc.pop("name", "")
 
-    # Spawn locations
     spawns = sb("creature_spawns", {
         "entry":  f"eq.{entry}",
         "select": "zoneid,worldx,worldy,worldz",
         "limit":  "50",
     })
-    # Enrich with zone names
     zone_cache = {}
     for s in spawns:
         zid = s.get("zoneid")
@@ -198,29 +198,34 @@ def get_npc(entry: int):
             zone_cache[zid] = z[0] if z else {"name": "Unknown"}
         s["zone"] = zone_cache.get(zid, {})
 
-    # Loot table
     loot = sb("creature_loots", {"entry": f"eq.{entry}", "select": "itemid,pct"})
     loot_items = []
     for l in loot[:30]:
         item = sb("item_infos", {"entry": f"eq.{l['itemid']}", "select": "entry,name,rarity,type"})
         if item:
-            loot_items.append({**item[0], "drop_chance": l.get("pct"), "rarity_name": RARITY.get(item[0].get("rarity",0),"Common")})
+            row = item[0]
+            row["display_name"] = row.pop("name", "")
+            row["rarity_name"]  = RARITY.get(row.get("rarity", 0), "Common")
+            loot_items.append({**row, "drop_chance": l.get("pct")})
 
-    # Vendor inventory
     vendor_items = sb("creature_vendors", {"entry": f"eq.{entry}", "select": "itemid,price"})
     sells = []
     for v in vendor_items[:50]:
         item = sb("item_infos", {"entry": f"eq.{v['itemid']}", "select": "entry,name,rarity,type,slotid"})
         if item:
-            sells.append({**item[0], "price": v.get("price"), "rarity_name": RARITY.get(item[0].get("rarity",0),"Common")})
+            row = item[0]
+            row["display_name"] = row.pop("name", "")
+            row["rarity_name"]  = RARITY.get(row.get("rarity", 0), "Common")
+            sells.append({**row, "price": v.get("price")})
 
-    # Quests started by this NPC
     started = sb("quests_creature_starter", {"creatureid": f"eq.{entry}", "select": "entry"})
-    quest_ids = [q["entry"] for q in started]
     quests_started = []
-    for qid in quest_ids[:10]:
+    for qid in [q["entry"] for q in started][:10]:
         q = sb("quests", {"entry": f"eq.{qid}", "select": "entry,name,level,xp"})
-        if q: quests_started.append(q[0])
+        if q:
+            row = q[0]
+            row["display_name"] = row.pop("name", "")
+            quests_started.append(row)
 
     return {
         "npc":            npc,
@@ -231,7 +236,7 @@ def get_npc(entry: int):
     }
 
 
-@app.get("/npcs", tags=["NPCs"], summary="Browse all NPCs")
+@app.get("/npcs", tags=["NPCs"])
 def list_npcs(
     page: int = 1,
     limit: int = Query(50, le=200),
@@ -240,11 +245,10 @@ def list_npcs(
     zone: Optional[int] = None,
 ):
     if zone:
-        # Get NPC entries in this zone via spawns
         spawns = sb("creature_spawns", {"zoneid": f"eq.{zone}", "select": "entry", "limit": "1000"})
         entries = list({s["entry"] for s in spawns})
         if not entries:
-            return {"page": page, "limit": limit, "count": 0, "data": []}
+            return []
         params = {
             "select": "entry,name,minlevel,maxlevel,faction,creaturetype",
             "entry":  f"in.({','.join(str(e) for e in entries[:500])})",
@@ -257,66 +261,71 @@ def list_npcs(
             "offset": str((page - 1) * limit),
             "order":  "name.asc",
         }
-    if search:  params["name"]    = f"ilike.*{search}*"
+    if search:              params["name"]    = f"ilike.*{search}*"
     if faction is not None: params["faction"] = f"eq.{faction}"
     rows = sb("creature_protos", params)
     for r in rows:
-        r["npc_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
 # =============================================================================
-# QUESTS  —  /quest/{entry}
+# QUESTS
 # =============================================================================
 
-@app.get("/quest/{entry}", tags=["Quests"], summary="Quest details + objectives + rewards + NPCs")
+@app.get("/quest/{entry}", tags=["Quests"])
 def get_quest(entry: int):
     quest = sb_one("quests", {"entry": f"eq.{entry}"})
+    quest["display_name"] = quest.pop("name", "")
 
-    # Objectives
     objectives = sb("quests_objectives", {"entry": f"eq.{entry}", "select": "objtype,objcount,description,objid"})
 
-    # Starter NPC
     starters = sb("quests_creature_starter", {"entry": f"eq.{entry}", "select": "creatureid"})
     start_npcs = []
     for s in starters:
         npc = sb("creature_protos", {"entry": f"eq.{s['creatureid']}", "select": "entry,name"})
         if npc:
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
             spawn = sb("creature_spawns", {"entry": f"eq.{s['creatureid']}", "select": "zoneid", "limit": "1"})
             zone_name = None
             if spawn:
                 z = sb("zone_infos", {"zoneid": f"eq.{spawn[0]['zoneid']}", "select": "name"})
                 zone_name = z[0]["name"] if z else None
-            start_npcs.append({**npc[0], "zone": zone_name})
+            start_npcs.append({**row, "zone": zone_name})
 
-    # Finisher NPC
     finishers = sb("quests_creature_finisher", {"entry": f"eq.{entry}", "select": "creatureid"})
     finish_npcs = []
     for f in finishers:
         npc = sb("creature_protos", {"entry": f"eq.{f['creatureid']}", "select": "entry,name"})
-        if npc: finish_npcs.append(npc[0])
+        if npc:
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
+            finish_npcs.append(row)
 
-    # Item rewards (parse from given/choice fields)
     reward_items = []
-    for field in [quest.get("given",""), quest.get("choice","")]:
+    for field in [quest.get("given", ""), quest.get("choice", "")]:
         if not field: continue
         for token in str(field).split(","):
             token = token.strip()
             if token.isdigit():
                 item = sb("item_infos", {"entry": f"eq.{token}", "select": "entry,name,rarity,type"})
                 if item:
-                    reward_items.append({**item[0], "rarity_name": RARITY.get(item[0].get("rarity",0),"Common")})
+                    row = item[0]
+                    row["display_name"] = row.pop("name", "")
+                    row["rarity_name"]  = RARITY.get(row.get("rarity", 0), "Common")
+                    reward_items.append(row)
 
     return {
-        "quest":        quest,
-        "objectives":   objectives,
-        "start_npcs":   start_npcs,
-        "finish_npcs":  finish_npcs,
-        "rewards":      reward_items,
+        "quest":       quest,
+        "objectives":  objectives,
+        "start_npcs":  start_npcs,
+        "finish_npcs": finish_npcs,
+        "rewards":     reward_items,
     }
 
 
-@app.get("/quests", tags=["Quests"], summary="Browse all quests")
+@app.get("/quests", tags=["Quests"])
 def list_quests(
     page: int = 1,
     limit: int = Query(50, le=200),
@@ -335,17 +344,18 @@ def list_quests(
     if type:   params["type"]  = f"eq.{type}"
     rows = sb("quests", params)
     for r in rows:
-        r["quest_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
 # =============================================================================
-# VENDORS  —  /vendor/{entry}
+# VENDORS
 # =============================================================================
 
-@app.get("/vendor/{entry}", tags=["Vendors"], summary="Vendor NPC + full item list with prices")
+@app.get("/vendor/{entry}", tags=["Vendors"])
 def get_vendor(entry: int):
     npc = sb_one("creature_protos", {"entry": f"eq.{entry}"})
+    npc["display_name"] = npc.pop("name", "")
 
     spawns = sb("creature_spawns", {"entry": f"eq.{entry}", "select": "zoneid,worldx,worldy", "limit": "5"})
     zone_cache = {}
@@ -361,23 +371,21 @@ def get_vendor(entry: int):
     for v in items:
         item = sb("item_infos", {"entry": f"eq.{v['itemid']}", "select": "entry,name,rarity,type,slotid,minrank"})
         if item:
-            item_list.append({
-                **item[0],
-                "price": v.get("price"),
-                "rarity_name": RARITY.get(item[0].get("rarity", 0), "Common"),
-            })
+            row = item[0]
+            row["display_name"] = row.pop("name", "")
+            row["rarity_name"]  = RARITY.get(row.get("rarity", 0), "Common")
+            item_list.append({**row, "price": v.get("price")})
 
     return {"vendor": npc, "locations": spawns, "items": item_list}
 
 
-@app.get("/vendors", tags=["Vendors"], summary="Browse all vendor NPCs")
+@app.get("/vendors", tags=["Vendors"])
 def list_vendors(
     page: int = 1,
     limit: int = Query(50, le=200),
     search: Optional[str] = None,
     zone: Optional[int] = None,
 ):
-    # Get NPC entries that have vendor inventory
     vendor_entries = sb("creature_vendors", {"select": "entry", "limit": "10000"})
     unique_entries = list({v["entry"] for v in vendor_entries})
 
@@ -387,7 +395,7 @@ def list_vendors(
         unique_entries = [e for e in unique_entries if e in zone_entries]
 
     if not unique_entries:
-        return {"page": page, "limit": limit, "count": 0, "data": []}
+        return []
 
     offset = (page - 1) * limit
     batch  = unique_entries[offset: offset + limit]
@@ -398,19 +406,19 @@ def list_vendors(
     if search: params["name"] = f"ilike.*{search}*"
     rows = sb("creature_protos", params)
     for r in rows:
-        r["npc_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
 # =============================================================================
-# ZONES  —  /zone/{zoneid}
+# ZONES
 # =============================================================================
 
-@app.get("/zone/{zoneid}", tags=["Zones"], summary="Zone details + NPCs + quests + public quests")
+@app.get("/zone/{zoneid}", tags=["Zones"])
 def get_zone(zoneid: int):
     zone = sb_one("zone_infos", {"zoneid": f"eq.{zoneid}"})
+    zone["display_name"] = zone.pop("name", "")
 
-    # NPCs in zone (via spawns)
     spawns = sb("creature_spawns", {"zoneid": f"eq.{zoneid}", "select": "entry,worldx,worldy", "limit": "500"})
     unique_entries = list({s["entry"] for s in spawns})
     npcs = []
@@ -419,24 +427,28 @@ def get_zone(zoneid: int):
             "entry":  f"in.({','.join(str(e) for e in unique_entries[:100])})",
             "select": "entry,name,minlevel,maxlevel,faction,creaturetype",
         })
+        for r in npc_rows:
+            r["display_name"] = r.pop("name", "")
         npcs = npc_rows
 
-    # Public quests
     pqs = sb("pquest_info", {"zoneid": f"eq.{zoneid}", "select": "entry,name,level,pinx,piny"})
+    for r in pqs:
+        r["display_name"] = r.pop("name", "")
 
-    # Chapters
     chapters = sb("chapter_infos", {"zoneid": f"eq.{zoneid}", "select": "entry,name,chapterrank,pinx,piny"})
+    for r in chapters:
+        r["display_name"] = r.pop("name", "")
 
     return {
-        "zone":     zone,
-        "npcs":     npcs,
+        "zone":            zone,
+        "npcs":            npcs,
         "npc_spawn_count": len(spawns),
-        "public_quests": pqs,
-        "chapters": chapters,
+        "public_quests":   pqs,
+        "chapters":        chapters,
     }
 
 
-@app.get("/zones", tags=["Zones"], summary="All zones")
+@app.get("/zones", tags=["Zones"])
 def list_zones(
     tier: Optional[int] = None,
     search: Optional[str] = None,
@@ -446,17 +458,18 @@ def list_zones(
     if search: params["name"] = f"ilike.*{search}*"
     rows = sb("zone_infos", params)
     for r in rows:
-        r["zone_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
 # =============================================================================
-# PUBLIC QUESTS  —  /pq/{entry}
+# PUBLIC QUESTS
 # =============================================================================
 
-@app.get("/pq/{entry}", tags=["Public Quests"], summary="Public quest details + stages + spawn locations")
+@app.get("/pq/{entry}", tags=["Public Quests"])
 def get_pq(entry: int):
     pq = sb_one("pquest_info", {"entry": f"eq.{entry}"})
+    pq["display_name"] = pq.pop("name", "")
 
     objectives = sb("pquest_objectives", {"entry": f"eq.{entry}", "select": "stage,stagename,description,type,count"})
     spawns     = sb("pquest_spawns",     {"entry": f"eq.{entry}", "select": "zoneid,worldx,worldy,worldz,objective,type"})
@@ -469,52 +482,61 @@ def get_pq(entry: int):
     return {"pq": pq, "zone": zone, "objectives": objectives, "spawns": spawns}
 
 
-@app.get("/pqs", tags=["Public Quests"], summary="Browse public quests")
+@app.get("/pqs", tags=["Public Quests"])
 def list_pqs(zone: Optional[int] = None, search: Optional[str] = None):
     params = {"select": "entry,name,level,zoneid,pinx,piny", "order": "zoneid.asc,name.asc"}
     if zone:   params["zoneid"] = f"eq.{zone}"
     if search: params["name"]   = f"ilike.*{search}*"
     rows = sb("pquest_info", params)
     for r in rows:
-        r["pq_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
 # =============================================================================
-# SEARCH  —  /search?q=...
+# SEARCH
 # =============================================================================
 
-@app.get("/search", tags=["Search"], summary="Search across items, NPCs, quests, zones and public quests")
+@app.get("/search", tags=["Search"])
 def search(
     q: str = Query(..., min_length=2),
     limit: int = Query(10, le=50),
 ):
     like = f"ilike.*{q}*"
-    results = {
-        "items":  sb("item_infos",    {"name": like, "select": "entry,name,rarity,type,minrank", "limit": str(limit)}),
-        "npcs":   sb("creature_protos",{"name": like, "select": "entry,name,minlevel,maxlevel,faction", "limit": str(limit)}),
-        "quests": sb("quests",         {"name": like, "select": "entry,name,level,xp", "limit": str(limit)}),
-        "zones":  sb("zone_infos",     {"name": like, "select": "zoneid,name,tier", "limit": str(limit)}),
-        "pqs":    sb("pquest_info",    {"name": like, "select": "entry,name,zoneid", "limit": str(limit)}),
+    items  = sb("item_infos",     {"name": like, "select": "entry,name,rarity,type,minrank", "limit": str(limit)})
+    npcs   = sb("creature_protos",{"name": like, "select": "entry,name,minlevel,maxlevel",   "limit": str(limit)})
+    quests = sb("quests",          {"name": like, "select": "entry,name,level,xp",            "limit": str(limit)})
+    zones  = sb("zone_infos",      {"name": like, "select": "zoneid,name,tier",               "limit": str(limit)})
+    pqs    = sb("pquest_info",     {"name": like, "select": "entry,name,zoneid",              "limit": str(limit)})
+
+    for r in items:
+        r["display_name"] = r.pop("name", "")
+        r["rarity_name"]  = RARITY.get(r.get("rarity", 0), "Common")
+    for r in npcs:   r["display_name"] = r.pop("name", "")
+    for r in quests: r["display_name"] = r.pop("name", "")
+    for r in zones:  r["display_name"] = r.pop("name", "")
+    for r in pqs:    r["display_name"] = r.pop("name", "")
+
+    return {
+        "query":   q,
+        "total":   len(items) + len(npcs) + len(quests) + len(zones) + len(pqs),
+        "results": {"items": items, "npcs": npcs, "quests": quests, "zones": zones, "pqs": pqs},
     }
-    for item in results["items"]:
-        item["rarity_name"] = RARITY.get(item.get("rarity", 0), "Common")
-    total = sum(len(v) for v in results.values())
-    return {"query": q, "total": total, "results": results}
 
 
 # =============================================================================
-# ABILITIES  —  /ability/{entry}
+# ABILITIES
 # =============================================================================
 
-@app.get("/ability/{entry}", tags=["Abilities"], summary="Ability details + stats by level")
+@app.get("/ability/{entry}", tags=["Abilities"])
 def get_ability(entry: int):
     ability = sb_one("ability_infos", {"entry": f"eq.{entry}"})
-    stats   = sb("ability_stats", {"entry": f"eq.{entry}", "select": "level,description,damages,heals,percents", "order": "level.asc"})
+    ability["display_name"] = ability.pop("name", "")
+    stats = sb("ability_stats", {"entry": f"eq.{entry}", "select": "level,description,damages,heals,percents", "order": "level.asc"})
     return {"ability": ability, "stats": stats}
 
 
-@app.get("/abilities", tags=["Abilities"], summary="Browse abilities by career")
+@app.get("/abilities", tags=["Abilities"])
 def list_abilities(
     careerline: Optional[int] = None,
     search: Optional[str] = None,
@@ -531,7 +553,7 @@ def list_abilities(
     if search: params["name"] = f"ilike.*{search}*"
     rows = sb("ability_infos", params)
     for r in rows:
-        r["ability_name"] = r.pop("name", "")
+        r["display_name"] = r.pop("name", "")
     return rows
 
 
@@ -543,6 +565,6 @@ def list_abilities(
 def root():
     return {
         "status": "ok",
-        "api": "WAR: Return of Reckoning Database API v2",
-        "endpoints": ["/items", "/npcs", "/quests", "/vendors", "/zones", "/pqs", "/abilities", "/search"],
+        "api":    "WAR: Return of Reckoning Database API v3",
+        "note":   "All 'name' fields are returned as 'display_name'",
     }
