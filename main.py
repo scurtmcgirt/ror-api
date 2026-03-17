@@ -150,6 +150,66 @@ def get_item(entry: int):
     }
 
 
+ITEM_TYPES = {
+    0:"Armor", 1:"Weapon", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
+    4:"Shield", 5:"Shield", 6:"Armor", 7:"Ranged Weapon",
+    8:"Accessory", 9:"Ranged Weapon", 10:"Accessory", 11:"Staff",
+    12:"Ranged", 13:"Melee", 14:"Melee", 15:"Bag",
+    16:"Trophy", 17:"Quest Item", 18:"Crafting", 19:"Currency",
+    20:"Potion", 21:"Dye", 22:"Mount", 23:"Gather",
+    24:"Enhancement", 25:"Container",
+}
+ITEM_SLOTS = {
+    0:"None", 10:"Main Hand", 11:"Off Hand", 12:"Ranged",
+    13:"Melee", 14:"Melee", 15:"Head", 16:"Shoulder",
+    17:"Body", 18:"Hands", 19:"Waist", 20:"Back",
+    21:"Feet", 22:"Legs", 23:"Wrist", 24:"Neck",
+    25:"Ring", 26:"Ring", 27:"Earring", 28:"Earring",
+    29:"Pocket", 30:"Pocket", 31:"Trophy", 42:"Bag",
+}
+
+
+@app.get("/item_detail", tags=["Items"], summary="Single item detail by entry - returns one object not a list")
+def get_item_detail(entry: int):
+    rows = sb("item_infos", {
+        "entry":  f"eq.{entry}",
+        "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor,stats",
+    })
+    rows = [r for r in rows if r.get("name")]
+    if not rows:
+        raise HTTPException(status_code=404, detail="Item not found")
+    r = rows[0]
+    r["display_name"]  = r.pop("name", "")
+    r["rarity_name"]   = RARITY.get(r.get("rarity", 0), "Common")
+    r["type_name"]     = ITEM_TYPES.get(r.get("type", 0), f"Type {r.get('type',0)}")
+    r["slot_name"]     = ITEM_SLOTS.get(r.get("slotid", 0), f"Slot {r.get('slotid',0)}")
+    r["stats_parsed"]  = parse_stats(r.get("stats", ""))
+
+    # NPCs that drop this item
+    drops = sb("creature_loots", {"itemid": f"eq.{entry}", "select": "entry,pct"})
+    drop_npcs = []
+    for d in drops[:20]:
+        npc = sb("creature_protos", {"entry": f"eq.{d['entry']}", "select": "entry,name,minlevel,maxlevel"})
+        if npc:
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
+            drop_npcs.append({**row, "drop_chance": d.get("pct")})
+
+    # Vendors that sell this item
+    vendor_rows = sb("creature_vendors", {"itemid": f"eq.{entry}", "select": "entry,price"})
+    vendors = []
+    for v in vendor_rows[:20]:
+        npc = sb("creature_protos", {"entry": f"eq.{v['entry']}", "select": "entry,name"})
+        if npc:
+            row = npc[0]
+            row["display_name"] = row.pop("name", "")
+            vendors.append({**row, "price": v.get("price")})
+
+    r["dropped_by"]    = drop_npcs
+    r["sold_by"]       = vendors
+    return r
+
+
 @app.get("/items", tags=["Items"])
 def list_items(
     page: int = 1,
@@ -175,23 +235,6 @@ def list_items(
     rows = sb("item_infos", params)
     # Also filter out any remaining empty names in Python
     rows = [r for r in rows if r.get("name")]
-    ITEM_TYPES = {
-        0:"Armor", 1:"Weapon", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
-        4:"Shield", 5:"Shield", 6:"Armor", 7:"Ranged Weapon",
-        8:"Accessory", 9:"Ranged Weapon", 10:"Accessory", 11:"Staff",
-        12:"Ranged", 13:"Melee", 14:"Melee", 15:"Bag",
-        16:"Trophy", 17:"Quest Item", 18:"Crafting", 19:"Currency",
-        20:"Potion", 21:"Dye", 22:"Mount", 23:"Gather",
-        24:"Enhancement", 25:"Container",
-    }
-    ITEM_SLOTS = {
-        0:"None", 10:"Main Hand", 11:"Off Hand", 12:"Ranged",
-        13:"Melee", 14:"Melee", 15:"Head", 16:"Shoulder",
-        17:"Body", 18:"Hands", 19:"Waist", 20:"Back",
-        21:"Feet", 22:"Legs", 23:"Wrist", 24:"Neck",
-        25:"Ring", 26:"Ring", 27:"Earring", 28:"Earring",
-        29:"Pocket", 30:"Pocket", 31:"Trophy", 42:"Bag",
-    }
     for r in rows:
         r["display_name"] = r.pop("name", "")
         r["rarity_name"]  = RARITY.get(r.get("rarity", 0), "Common")
