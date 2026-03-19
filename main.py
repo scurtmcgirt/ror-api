@@ -151,21 +151,27 @@ def get_item(entry: int):
 
 
 ITEM_TYPES = {
-    0:"Armor", 1:"Weapon", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
-    4:"Shield", 5:"Shield", 6:"Armor", 7:"Ranged Weapon",
+    0:"Heavy Armor", 1:"Medium Armor", 2:"One-Hand Weapon", 3:"Two-Hand Weapon",
+    4:"Shield", 5:"Offhand", 6:"Light Armor", 7:"Ranged Weapon",
     8:"Accessory", 9:"Ranged Weapon", 10:"Accessory", 11:"Staff",
-    12:"Ranged", 13:"Melee", 14:"Melee", 15:"Bag",
-    16:"Trophy", 17:"Quest Item", 18:"Crafting", 19:"Currency",
-    20:"Potion", 21:"Dye", 22:"Mount", 23:"Gather",
-    24:"Enhancement", 25:"Container",
+    12:"Throwing", 13:"Melee Weapon", 14:"Melee Weapon", 15:"Bag",
+    16:"Trophy", 17:"Quest Item", 18:"Light Armor", 19:"Currency",
+    20:"Consumable", 21:"Dye", 22:"Mount", 23:"Gathering",
+    24:"Enhancement", 25:"Container", 26:"Medium Armor", 27:"Heavy Armor",
+    28:"Accessory", 29:"Accessory", 30:"Accessory", 31:"Trophy",
+    32:"Crafting Material", 33:"Crafting Material", 34:"Crafting Material",
+    35:"Talisman", 36:"Vessel",
 }
 ITEM_SLOTS = {
-    0:"None", 10:"Main Hand", 11:"Off Hand", 12:"Ranged",
-    13:"Melee", 14:"Melee", 15:"Head", 16:"Shoulder",
-    17:"Body", 18:"Hands", 19:"Waist", 20:"Back",
-    21:"Feet", 22:"Legs", 23:"Wrist", 24:"Neck",
-    25:"Ring", 26:"Ring", 27:"Earring", 28:"Earring",
-    29:"Pocket", 30:"Pocket", 31:"Trophy", 42:"Bag",
+    0:"None", 1:"Main Hand", 2:"Off Hand", 3:"Ranged",
+    4:"Helm", 5:"Shoulder", 6:"Body", 7:"Hands",
+    8:"Waist", 9:"Feet", 10:"Main Hand", 11:"Off Hand",
+    12:"Ranged", 13:"Melee", 14:"Melee", 15:"Head",
+    16:"Shoulder", 17:"Body", 18:"Hands", 19:"Waist",
+    20:"Back", 21:"Feet", 22:"Legs", 23:"Wrist",
+    24:"Neck", 25:"Ring", 26:"Ring", 27:"Earring",
+    28:"Earring", 29:"Pocket", 30:"Pocket", 31:"Trophy",
+    32:"Pocket", 33:"Pocket", 42:"Bag",
 }
 
 
