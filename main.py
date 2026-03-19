@@ -164,13 +164,13 @@ ITEM_TYPES = {
 }
 ITEM_SLOTS = {
     0:"None", 1:"Main Hand", 2:"Off Hand", 3:"Ranged",
-    4:"Helm", 5:"Shoulder", 6:"Body", 7:"Hands",
-    8:"Waist", 9:"Feet", 10:"Main Hand", 11:"Off Hand",
+    4:"Helm", 5:"Shoulder", 6:"Body", 7:"Gloves",
+    8:"Waist", 9:"Boots", 10:"Main Hand", 11:"Off Hand",
     12:"Ranged", 13:"Melee", 14:"Melee", 15:"Head",
-    16:"Shoulder", 17:"Hands", 18:"Waist", 19:"Feet",
-    20:"Body", 21:"Gloves", 22:"Legs", 23:"Wrist",
-    24:"Neck", 25:"Ring", 26:"Ring", 27:"Earring",
-    28:"Earring", 29:"Pocket", 30:"Pocket", 31:"Trophy",
+    16:"Shoulder", 17:"Gloves", 18:"Waist", 19:"Boots",
+    20:"Body", 21:"Gloves", 22:"Boots", 23:"Gloves",
+    24:"Jewelry", 25:"Jewelry", 26:"Jewelry", 27:"Jewelry",
+    28:"Jewelry", 29:"Pocket", 30:"Pocket", 31:"Trophy",
     32:"Pocket", 33:"Pocket", 42:"Bag",
 }
 
