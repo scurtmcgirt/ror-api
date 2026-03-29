@@ -179,7 +179,7 @@ ITEM_SLOTS = {
 def get_item_detail(entry: int):
     rows = sb("item_infos", {
         "entry":  f"eq.{entry}",
-        "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor,stats",
+        "select": "entry,name,description,type,slotid,rarity,minrank,minrenown,career,dps,speed,armor,stats,iconid,model_image",
     })
     rows = [r for r in rows if r.get("name")]
     if not rows:
