@@ -14,7 +14,7 @@
     align-items: start;
   }
 
-  /* ── RENDER PANEL ── */
+  /* ── LEFT PANEL ── */
   .item-render-panel {
     background: linear-gradient(180deg, #0a0800 0%, #120f04 100%);
     border-right: 1px solid var(--border-red);
@@ -36,63 +36,102 @@
     background: linear-gradient(180deg, transparent, var(--red-dim), transparent);
   }
 
-  .item-3d-render {
+  /* ── SCREENSHOT UPLOAD AREA ── */
+  .screenshot-area {
     width: 180px;
     height: 180px;
-    object-fit: contain;
-    image-rendering: auto;
-    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.8));
-    transition: transform 0.3s ease;
+    position: relative;
+    cursor: pointer;
   }
 
-  .item-3d-render:hover {
-    transform: scale(1.05);
-  }
-
-  .render-placeholder {
+  .screenshot-area img.screenshot-img {
     width: 180px;
     height: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    object-fit: cover;
+    border: 1px solid var(--border-red);
+    display: block;
+  }
+
+  .screenshot-upload-label {
+    width: 180px;
+    height: 180px;
     border: 1px dashed var(--border-red);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-style: italic;
-  }
-
-  /* ── ICON + LABEL ── */
-  .item-icon-row {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: rgba(0,0,0,0.2);
+    gap: 8px;
+  }
+
+  .screenshot-upload-label:hover {
+    border-color: var(--red);
+    background: rgba(191,74,6,0.08);
+  }
+
+  .screenshot-upload-icon {
+    font-size: 28px;
+    line-height: 1;
+    opacity: 0.5;
+  }
+
+  .screenshot-upload-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    line-height: 1.4;
+    padding: 0 8px;
+  }
+
+  .screenshot-remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--border-red);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 2px 6px;
+    cursor: pointer;
+    display: none;
+    font-family: 'Crimson Text', serif;
+    line-height: 1.4;
+  }
+
+  .screenshot-remove-btn:hover { color: var(--yellow); }
+
+  .screenshot-area:hover .screenshot-remove-btn { display: block; }
+
+  #screenshot-file-input { display: none; }
+
+  /* ── ICON ROW ── */
+  .item-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .item-icon {
-    width: 180px;
-    height: 180px;
-    border: 2px solid var(--border-red);
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-red);
     background: var(--bg4);
     image-rendering: pixelated;
     flex-shrink: 0;
-    box-shadow: 0 0 12px rgba(0,0,0,0.8);
   }
 
   .item-icon-label {
-    font-size: 12px;
-    color: var(--text-dim);
+    font-size: 11px;
+    color: var(--text-muted);
     font-style: italic;
     font-family: 'Crimson Text', serif;
-    letter-spacing: 0.04em;
-    text-align: center;
-    margin-top: 6px;
   }
 
   /* ── ITEM INFO PANEL ── */
-  .item-info-panel {
-    padding: 24px;
-  }
+  .item-info-panel { padding: 24px; }
 
   .item-details {
     display: flex;
@@ -132,35 +171,19 @@
     margin-bottom: 8px;
   }
 
-  /* ── RENDER TOGGLE ── */
-  .render-toggle {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-style: italic;
-    cursor: pointer;
-    border: none;
-    background: none;
-    font-family: 'Crimson Text', serif;
-    padding: 0;
-    text-decoration: underline;
-    text-decoration-color: var(--border-red);
-  }
-
-  .render-toggle:hover { color: var(--yellow); }
-
-  /* ── RESPONSIVE ── */
   @media (max-width: 640px) {
-    .item-layout {
-      grid-template-columns: 1fr;
-    }
+    .item-layout { grid-template-columns: 1fr; }
     .item-render-panel {
       border-right: none;
       border-bottom: 1px solid var(--border-red);
       min-height: auto;
       padding: 16px;
+      flex-direction: row;
+      justify-content: flex-start;
     }
-    .item-icon { width: 120px; height: 120px; }
-    .render-placeholder { width: 120px; height: 120px; }
+    .screenshot-area, .screenshot-upload-label, .screenshot-area img.screenshot-img {
+      width: 120px; height: 120px;
+    }
   }
 </style>
 </head>
@@ -183,11 +206,16 @@
 <div class="container">
   <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading item...</div></div>
 </div>
+
+<input type="file" id="screenshot-file-input" accept="image/*">
+
 <script>
-const API          = 'https://ror-api-production-acc5.up.railway.app';
-const STORAGE      = 'https://rmihmhpoistwtnbcecli.supabase.co/storage/v1/object/public';
-const ICONS_URL    = `${STORAGE}/icons`;
-const RENDERS_URL  = `${STORAGE}/renders`;
+const API         = 'https://ror-api-production-acc5.up.railway.app';
+const SUPABASE_URL  = 'https://rmihmhpoistwtnbcecli.supabase.co';
+const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtaWhtaHBvaXN0d3RuYmNlY2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTAwOTMsImV4cCI6MjA4OTAyNjA5M30.7yC3eANrpqoRbGLm6LIJk6w5raw-ny3DYhiAQe42XY8';
+const STORAGE_URL  = `${SUPABASE_URL}/storage/v1/object/public`;
+const ICONS_URL    = `${STORAGE_URL}/icons`;
+const SCREENSHOTS_URL = `${STORAGE_URL}/screenshots`;
 
 const RARITY_CLASS = {
   'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare',
@@ -210,27 +238,117 @@ function formatDropChance(pct) {
   return p < 0.01 ? '< 0.01%' : p.toFixed(2) + '%';
 }
 
-function iconUrl(iconid) {
-  if (!iconid) return null;
-  return `${ICONS_URL}/icon_${iconid}.png`;
+// ── Screenshot upload to Supabase Storage ──
+async function uploadScreenshot(entry, file) {
+  const ext  = file.type === 'image/png' ? 'png' : 'jpg';
+  const path = `${entry}.${ext}`;
+  const url  = `${SUPABASE_URL}/storage/v1/object/screenshots/${path}`;
+  const res  = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'apikey':        ANON_KEY,
+      'Authorization': `Bearer ${ANON_KEY}`,
+      'Content-Type':  file.type,
+      'x-upsert':      'true',
+    },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  return `${SCREENSHOTS_URL}/screenshots/${path}`;
 }
 
-function renderUrl(modelImage) {
-  if (!modelImage) return null;
-  // model_image is stored as "fg.0.0.dwm_armor_hvy_01.png"
-  return `${RENDERS_URL}/${modelImage}`;
+async function checkExistingScreenshot(entry) {
+  // Try png then jpg
+  for (const ext of ['png', 'jpg']) {
+    const url = `${SCREENSHOTS_URL}/screenshots/${entry}.${ext}`;
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (res.ok) return url;
+    } catch(e) {}
+  }
+  return null;
+}
+
+// ── Screenshot UI ──
+async function initScreenshot(entry) {
+  const area     = document.getElementById('ss-area');
+  const label    = document.getElementById('ss-label');
+  const img      = document.getElementById('ss-img');
+  const removeBtn= document.getElementById('ss-remove');
+  const fileInput= document.getElementById('screenshot-file-input');
+  const status   = document.getElementById('ss-status');
+
+  function showImage(url) {
+    img.src = url;
+    img.style.display = 'block';
+    label.style.display = 'none';
+    if (status) status.textContent = '';
+  }
+
+  function showUpload() {
+    img.style.display = 'none';
+    label.style.display = 'flex';
+  }
+
+  function setStatus(msg, color='var(--text-muted)') {
+    if (status) { status.textContent = msg; status.style.color = color; }
+  }
+
+  // Check if screenshot already exists in Supabase
+  setStatus('Checking for screenshot...');
+  const existing = await checkExistingScreenshot(entry);
+  if (existing) { showImage(existing); } else { showUpload(); }
+
+  async function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    setStatus('Uploading...', 'var(--yellow)');
+    try {
+      const url = await uploadScreenshot(entry, file);
+      showImage(url + '?t=' + Date.now());
+      setStatus('Uploaded! Visible to all users.', '#4fc34f');
+      setTimeout(() => setStatus(''), 3000);
+    } catch(e) {
+      setStatus('Upload failed: ' + e.message, '#e88');
+    }
+    fileInput.value = '';
+  }
+
+  // Click area to upload
+  area.addEventListener('click', (e) => {
+    if (e.target === removeBtn) return;
+    if (img.style.display !== 'none') return;
+    fileInput.click();
+  });
+
+  // Replace button (click on existing image)
+  img.addEventListener('click', () => fileInput.click());
+  img.style.cursor = 'pointer';
+  img.title = 'Click to replace screenshot';
+
+  // File selected
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  // Drag and drop
+  area.addEventListener('dragover', (e) => { e.preventDefault(); label.style.borderColor = 'var(--red)'; });
+  area.addEventListener('dragleave', () => { label.style.borderColor = ''; });
+  area.addEventListener('drop', (e) => {
+    e.preventDefault();
+    label.style.borderColor = '';
+    handleFile(e.dataTransfer.files[0]);
+  });
 }
 
 function renderItem(data) {
-  const rarityClass  = RARITY_CLASS[data.rarity_name] || '';
-  const statsHtml    = data.stats_parsed && Object.keys(data.stats_parsed).length
+  const entry       = data.entry;
+  const rarityClass = RARITY_CLASS[data.rarity_name] || '';
+  const statsHtml   = data.stats_parsed && Object.keys(data.stats_parsed).length
     ? `<div class="stats-section">
         <div class="stats-section-title">Stats</div>
         <div class="stats-grid">${formatStats(data.stats_parsed)}</div>
       </div>` : '';
 
-  const droppedBy  = data.dropped_by || [];
-  const soldBy     = data.sold_by    || [];
+  const droppedBy = data.dropped_by || [];
+  const soldBy    = data.sold_by    || [];
 
   const droppedRows = droppedBy.length
     ? droppedBy.map(n => `<tr>
@@ -248,37 +366,33 @@ function renderItem(data) {
       </tr>`).join('')
     : `<tr><td colspan="3"><div class="empty-state">Not sold by any vendor</div></td></tr>`;
 
-  document.getElementById('breadcrumb-name').textContent = data.display_name || `Item #${data.entry}`;
+  document.getElementById('breadcrumb-name').textContent = data.display_name || `Item #${entry}`;
   document.title = `${data.display_name} - WAR Database`;
 
-  // ── Build icon and render HTML ──
-  const icon    = iconUrl(data.iconid);
-  const render  = renderUrl(data.model_image);
-
+  const icon = data.iconid ? `${ICONS_URL}/icon_${data.iconid}.png` : null;
   const iconHtml = icon
-    ? `<img class="item-icon" src="${icon}" alt="icon"
-         onerror="this.style.display='none'">`
+    ? `<img class="item-icon" src="${icon}" alt="icon" onerror="this.style.display='none'">`
     : '';
-
-  const renderHtml = render
-    ? `<img class="item-3d-render" src="${render}" alt="3D render"
-         onerror="this.parentElement.innerHTML='<div class=\\'render-placeholder\\'>No render available</div>'">`
-    : `<div class="render-placeholder">No render available</div>`;
-
-  const iconLabelHtml = icon
-    ? `<div class="item-icon-row">
-        ${iconHtml}
-        <span class="item-icon-label">${data.slot_name||data.type_name||''}</span>
-      </div>`
-    : `<div class="render-placeholder">No icon available</div>`;
+  const iconRowHtml = iconHtml
+    ? `<div class="item-icon-row">${iconHtml}<span class="item-icon-label">${data.slot_name||data.type_name||''}</span></div>`
+    : '';
 
   document.getElementById('content').innerHTML = `
     <div class="entity-header" style="padding:0;overflow:hidden;">
       <div class="item-layout">
 
-        <!-- Left: icon display -->
+        <!-- Left: screenshot upload + icon -->
         <div class="item-render-panel">
-          ${iconLabelHtml}
+          <div class="screenshot-area" id="ss-area">
+            <img class="screenshot-img" id="ss-img" style="display:none" alt="screenshot">
+            <label class="screenshot-upload-label" id="ss-label">
+              <span class="screenshot-upload-icon">📷</span>
+              <span class="screenshot-upload-text">Click or drag to upload<br>a screenshot</span>
+            </label>
+            <button class="screenshot-remove-btn" id="ss-remove">✕ Remove</button>
+          </div>
+          <div id="ss-status" style="font-size:11px;font-style:italic;text-align:center;color:var(--text-muted);min-height:16px;"></div>
+          ${iconRowHtml}
         </div>
 
         <!-- Right: item details -->
@@ -311,7 +425,7 @@ function renderItem(data) {
             </div>` : ''}
             <div class="item-detail-row">
               <span class="detail-label">Entry</span>
-              <span class="detail-value" style="color:var(--text-muted);font-size:12px">#${data.entry}</span>
+              <span class="detail-value" style="color:var(--text-muted);font-size:12px">#${entry}</span>
             </div>
           </div>
           ${statsHtml}
@@ -342,6 +456,8 @@ function renderItem(data) {
         <tbody>${soldRows}</tbody>
       </table>
     </div>`;
+
+  initScreenshot(entry);
 }
 
 async function load() {
