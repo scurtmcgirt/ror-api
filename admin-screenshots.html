@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screenshot Moderation - WAR RoR Admin</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-header {
+    background: var(--bg2);
+    border-bottom: 2px solid var(--red-dim);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .admin-title {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 18px;
+    color: var(--yellow);
+  }
+  .admin-subtitle { font-size: 13px; color: var(--text-muted); font-style: italic; }
+  #password-gate {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 32px;
+    background: var(--bg2);
+    border: 1px solid var(--border-red);
+    text-align: center;
+  }
+  #password-gate input {
+    background: var(--bg3);
+    border: 1px solid var(--border-red);
+    color: var(--text-bright);
+    padding: 8px 14px;
+    font-size: 15px;
+    width: 100%;
+    margin: 12px 0;
+    font-family: 'Crimson Text', serif;
+    outline: none;
+  }
+  #password-gate button {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--text-bright);
+    padding: 8px 24px;
+    font-family: 'Crimson Text', serif;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+  }
+  #password-gate button:hover { background: var(--red); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 24px;
+  }
+  .ss-card {
+    background: var(--bg2);
+    border: 1px solid var(--border-red);
+    overflow: hidden;
+  }
+  .ss-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+  }
+  .ss-card-body { padding: 12px; }
+  .ss-card-entry {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 13px;
+    color: var(--yellow);
+    margin-bottom: 4px;
+  }
+  .ss-card-name { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; font-style: italic; }
+  .ss-card-actions { display: flex; gap: 8px; }
+  .btn-approve {
+    flex: 1;
+    background: #1a4a1a;
+    border: 1px solid #2a7a2a;
+    color: #4fc34f;
+    padding: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-approve:hover { background: #2a6a2a; }
+  .btn-reject {
+    flex: 1;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--text-bright);
+    padding: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-reject:hover { background: var(--red); }
+  .ss-card.approved { border-color: #2a7a2a; opacity: 0.6; }
+  .ss-card.rejected { border-color: var(--red-dim); opacity: 0.4; }
+  .empty-admin { text-align: center; padding: 80px; color: var(--text-muted); font-style: italic; font-size: 18px; }
+  #loading-msg { text-align: center; padding: 60px; color: var(--text-muted); font-style: italic; }
+  .count-badge {
+    background: var(--bg4);
+    border: 1px solid var(--border-red);
+    color: var(--text-dim);
+    font-size: 12px;
+    padding: 2px 10px;
+    font-family: 'Crimson Text', serif;
+  }
+</style>
+</head>
+<body>
+<div id="password-gate">
+  <div style="font-family:'MedievalSharp',cursive;font-size:20px;color:var(--yellow);margin-bottom:8px;">☠ Admin Access</div>
+  <div style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px;">Screenshot Moderation</div>
+  <input type="password" id="admin-pass" placeholder="Enter admin password" autocomplete="current-password">
+  <button onclick="checkPassword()">Enter</button>
+  <div id="pass-error" style="color:#e88;font-size:12px;margin-top:8px;"></div>
+</div>
+
+<div id="admin-panel" style="display:none;">
+  <div class="admin-header">
+    <div>
+      <div class="admin-title">☠ Screenshot Moderation</div>
+      <div class="admin-subtitle">Approve or reject user-submitted screenshots</div>
+    </div>
+    <span class="count-badge" id="pending-count">Loading...</span>
+  </div>
+  <div id="loading-msg">Loading pending screenshots...</div>
+  <div class="grid" id="screenshots-grid"></div>
+  <div id="empty-msg" class="empty-admin" style="display:none">✓ No pending screenshots</div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://rmihmhpoistwtnbcecli.supabase.co';
+const ANON_KEY      = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtaWhtaHBvaXN0d3RuYmNlY2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTAwOTMsImV4cCI6MjA4OTAyNjA5M30.7yC3eANrpqoRbGLm6LIJk6w5raw-ny3DYhiAQe42XY8';
+const SERVICE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtaWhtaHBvaXN0d3RuYmNlY2xpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQ1MDA5MywiZXhwIjoyMDg5MDI2MDkzfQ.Nv2JwPYeCRqepQyKmp26UXQmzJ5jBhetEjLB1BD3Mw0';
+const API           = 'https://ror-api-production-acc5.up.railway.app';
+const STORAGE_PUB   = `${SUPABASE_URL}/storage/v1/object/public/screenshots`;
+
+// Simple password — change this to something private
+const ADMIN_PASSWORD = 'ror-admin-2024';
+
+let adminAuthed = false;
+
+function checkPassword() {
+  const pass = document.getElementById('admin-pass').value;
+  if (pass === ADMIN_PASSWORD) {
+    adminAuthed = true;
+    document.getElementById('password-gate').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    loadPending();
+  } else {
+    document.getElementById('pass-error').textContent = 'Incorrect password';
+  }
+}
+
+document.getElementById('admin-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPassword();
+});
+
+async function storageRequest(method, path, body=null) {
+  const url = `${SUPABASE_URL}/storage/v1/${path}`;
+  const opts = {
+    method,
+    headers: {
+      'apikey':        SERVICE_KEY,
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+    }
+  };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  try { return { ok: res.ok, data: JSON.parse(text) }; }
+  catch(e) { return { ok: res.ok, data: text }; }
+}
+
+async function loadPending() {
+  document.getElementById('loading-msg').style.display = 'block';
+  document.getElementById('empty-msg').style.display = 'none';
+
+  // List files in pending folder
+  const { ok, data } = await storageRequest('POST', 'object/list/screenshots', {
+    prefix: 'pending/',
+    limit: 200,
+    offset: 0,
+  });
+
+  document.getElementById('loading-msg').style.display = 'none';
+
+  if (!ok || !data || !data.length) {
+    document.getElementById('empty-msg').style.display = 'block';
+    document.getElementById('pending-count').textContent = '0 pending';
+    return;
+  }
+
+  // Filter to actual files (not folders)
+  const files = data.filter(f => f.name && f.name !== '' && f.metadata);
+  document.getElementById('pending-count').textContent = `${files.length} pending`;
+
+  if (!files.length) {
+    document.getElementById('empty-msg').style.display = 'block';
+    return;
+  }
+
+  const grid = document.getElementById('screenshots-grid');
+  grid.innerHTML = '';
+
+  for (const file of files) {
+    const filename = file.name; // e.g. "435076.png"
+    const entry    = filename.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+    const imgUrl   = `${STORAGE_PUB}/pending/${filename}?t=${Date.now()}`;
+
+    // Try to get item name
+    let itemName = `Entry #${entry}`;
+    try {
+      const r = await fetch(`${API}/item_detail?entry=${entry}`);
+      if (r.ok) {
+        const d = await r.json();
+        if (d.display_name) itemName = d.display_name;
+      }
+    } catch(e) {}
+
+    const card = document.createElement('div');
+    card.className = 'ss-card';
+    card.id = `card-${entry}`;
+    card.innerHTML = `
+      <img src="${imgUrl}" alt="screenshot" onclick="window.open('item.html?entry=${entry}','_blank')">
+      <div class="ss-card-body">
+        <div class="ss-card-entry">Entry #${entry}</div>
+        <div class="ss-card-name">${itemName}</div>
+        <div class="ss-card-actions">
+          <button class="btn-approve" onclick="approve('${entry}','${filename}')">✓ Approve</button>
+          <button class="btn-reject"  onclick="reject('${entry}','${filename}')">✕ Reject</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+async function approve(entry, filename) {
+  const card = document.getElementById(`card-${entry}`);
+  card.querySelector('.btn-approve').textContent = 'Approving...';
+  card.querySelector('.btn-approve').disabled = true;
+  card.querySelector('.btn-reject').disabled  = true;
+
+  // Copy from pending/ to approved/
+  const { ok } = await storageRequest('POST', 'object/copy', {
+    bucketId:           'screenshots',
+    sourceKey:          `pending/${filename}`,
+    destinationBucket:  'screenshots',
+    destinationKey:     `approved/${filename}`,
+  });
+
+  if (ok) {
+    // Delete from pending
+    await storageRequest('DELETE', `object/screenshots/pending/${filename}`);
+    card.className = 'ss-card approved';
+    card.querySelector('.ss-card-actions').innerHTML = '<span style="color:#4fc34f;font-size:13px;font-style:italic;">✓ Approved</span>';
+    updateCount(-1);
+  } else {
+    card.querySelector('.btn-approve').textContent = '✓ Approve';
+    card.querySelector('.btn-approve').disabled = false;
+    card.querySelector('.btn-reject').disabled  = false;
+    alert('Approve failed — check console');
+  }
+}
+
+async function reject(entry, filename) {
+  if (!confirm(`Reject screenshot for entry ${entry}? This will delete it.`)) return;
+  const card = document.getElementById(`card-${entry}`);
+  card.querySelector('.btn-reject').textContent = 'Rejecting...';
+  card.querySelector('.btn-reject').disabled = true;
+  card.querySelector('.btn-approve').disabled = true;
+
+  const { ok } = await storageRequest('DELETE', `object/screenshots/pending/${filename}`);
+
+  if (ok) {
+    card.className = 'ss-card rejected';
+    card.querySelector('.ss-card-actions').innerHTML = '<span style="color:#e88;font-size:13px;font-style:italic;">✕ Rejected</span>';
+    updateCount(-1);
+  } else {
+    card.querySelector('.btn-reject').textContent = '✕ Reject';
+    card.querySelector('.btn-reject').disabled = false;
+    card.querySelector('.btn-approve').disabled = false;
+    alert('Reject failed — check console');
+  }
+}
+
+function updateCount(delta) {
+  const el = document.getElementById('pending-count');
+  const n  = parseInt(el.textContent) + delta;
+  el.textContent = `${Math.max(0,n)} pending`;
+  if (n <= 0) document.getElementById('empty-msg').style.display = 'block';
+}
+</script>
+</body>
+</html>

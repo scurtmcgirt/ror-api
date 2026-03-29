@@ -6,15 +6,12 @@
 <title>Item - WAR: Return of Reckoning Database</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  /* ── ITEM HEADER LAYOUT ── */
   .item-layout {
     display: grid;
     grid-template-columns: 220px 1fr;
     gap: 0;
     align-items: start;
   }
-
-  /* ── LEFT PANEL ── */
   .item-render-panel {
     background: linear-gradient(180deg, #0a0800 0%, #120f04 100%);
     border-right: 1px solid var(--border-red);
@@ -27,7 +24,6 @@
     justify-content: center;
     position: relative;
   }
-
   .item-render-panel::after {
     content: '';
     position: absolute;
@@ -35,15 +31,11 @@
     width: 1px;
     background: linear-gradient(180deg, transparent, var(--red-dim), transparent);
   }
-
-  /* ── SCREENSHOT UPLOAD AREA ── */
   .screenshot-area {
     width: 180px;
     height: 180px;
     position: relative;
-    cursor: pointer;
   }
-
   .screenshot-area img.screenshot-img {
     width: 180px;
     height: 180px;
@@ -51,7 +43,6 @@
     border: 1px solid var(--border-red);
     display: block;
   }
-
   .screenshot-upload-label {
     width: 180px;
     height: 180px;
@@ -65,18 +56,11 @@
     background: rgba(0,0,0,0.2);
     gap: 8px;
   }
-
   .screenshot-upload-label:hover {
     border-color: var(--red);
     background: rgba(191,74,6,0.08);
   }
-
-  .screenshot-upload-icon {
-    font-size: 28px;
-    line-height: 1;
-    opacity: 0.5;
-  }
-
+  .screenshot-upload-icon { font-size: 28px; opacity: 0.5; }
   .screenshot-upload-text {
     font-size: 11px;
     color: var(--text-muted);
@@ -85,101 +69,52 @@
     line-height: 1.4;
     padding: 0 8px;
   }
-
-  .screenshot-remove-btn {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(0,0,0,0.7);
-    border: 1px solid var(--border-red);
-    color: var(--text-dim);
-    font-size: 11px;
-    padding: 2px 6px;
-    cursor: pointer;
-    display: none;
-    font-family: 'Crimson Text', serif;
-    line-height: 1.4;
+  .ss-pending-badge {
+    font-size: 10px;
+    color: var(--yellow);
+    font-style: italic;
+    text-align: center;
+    padding: 4px 0;
+    letter-spacing: 0.04em;
   }
-
-  .screenshot-remove-btn:hover { color: var(--yellow); }
-
-  .screenshot-area:hover .screenshot-remove-btn { display: block; }
-
   #screenshot-file-input { display: none; }
-
-  /* ── ICON ROW ── */
-  .item-icon-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  #ss-status {
+    font-size: 11px;
+    font-style: italic;
+    text-align: center;
+    color: var(--text-muted);
+    min-height: 16px;
   }
-
+  .item-icon-row { display: flex; align-items: center; gap: 8px; }
   .item-icon {
-    width: 36px;
-    height: 36px;
+    width: 36px; height: 36px;
     border: 1px solid var(--border-red);
     background: var(--bg4);
     image-rendering: pixelated;
     flex-shrink: 0;
   }
-
   .item-icon-label {
     font-size: 11px;
     color: var(--text-muted);
     font-style: italic;
     font-family: 'Crimson Text', serif;
   }
-
-  /* ── ITEM INFO PANEL ── */
   .item-info-panel { padding: 24px; }
-
-  .item-details {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-
-  .item-detail-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-  }
-
-  .detail-label {
-    color: var(--text-muted);
-    font-style: italic;
-    min-width: 80px;
-    font-size: 13px;
-  }
-
+  .item-details { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+  .item-detail-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .detail-label { color: var(--text-muted); font-style: italic; min-width: 80px; font-size: 13px; }
   .detail-value { color: var(--text-bright); }
-
-  .stats-section {
-    margin-top: 14px;
-    border-top: 1px solid var(--border-red);
-    padding-top: 12px;
-  }
-
+  .stats-section { margin-top: 14px; border-top: 1px solid var(--border-red); padding-top: 12px; }
   .stats-section-title {
     font-family: 'MedievalSharp', cursive;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    color: var(--yellow);
-    text-transform: uppercase;
-    margin-bottom: 8px;
+    font-size: 11px; letter-spacing: 0.1em;
+    color: var(--yellow); text-transform: uppercase; margin-bottom: 8px;
   }
-
   @media (max-width: 640px) {
     .item-layout { grid-template-columns: 1fr; }
     .item-render-panel {
-      border-right: none;
-      border-bottom: 1px solid var(--border-red);
-      min-height: auto;
-      padding: 16px;
-      flex-direction: row;
-      justify-content: flex-start;
+      border-right: none; border-bottom: 1px solid var(--border-red);
+      min-height: auto; padding: 16px; flex-direction: row; justify-content: flex-start;
     }
     .screenshot-area, .screenshot-upload-label, .screenshot-area img.screenshot-img {
       width: 120px; height: 120px;
@@ -206,16 +141,14 @@
 <div class="container">
   <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading item...</div></div>
 </div>
-
 <input type="file" id="screenshot-file-input" accept="image/*">
 
 <script>
-const API         = 'https://ror-api-production-acc5.up.railway.app';
-const SUPABASE_URL  = 'https://rmihmhpoistwtnbcecli.supabase.co';
+const API          = 'https://ror-api-production-acc5.up.railway.app';
+const SUPABASE_URL = 'https://rmihmhpoistwtnbcecli.supabase.co';
 const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtaWhtaHBvaXN0d3RuYmNlY2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTAwOTMsImV4cCI6MjA4OTAyNjA5M30.7yC3eANrpqoRbGLm6LIJk6w5raw-ny3DYhiAQe42XY8';
-const STORAGE_URL  = `${SUPABASE_URL}/storage/v1/object/public`;
-const ICONS_URL    = `${STORAGE_URL}/icons`;
-const SCREENSHOTS_URL = `${STORAGE_URL}/screenshots`;
+const STORAGE_PUB  = `${SUPABASE_URL}/storage/v1/object/public/screenshots`;
+const ICONS_URL    = `${SUPABASE_URL}/storage/v1/object/public/icons`;
 
 const RARITY_CLASS = {
   'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare',
@@ -226,10 +159,8 @@ function getEntry() { return new URLSearchParams(window.location.search).get('en
 
 function formatStats(obj) {
   if (!obj || !Object.keys(obj).length) return '';
-  return Object.entries(obj)
-    .filter(([k,v]) => v && v !== 0)
-    .map(([k,v]) => `<div class="stat-row">${v} ${k}</div>`)
-    .join('');
+  return Object.entries(obj).filter(([k,v])=>v&&v!==0)
+    .map(([k,v])=>`<div class="stat-row">${v} ${k}</div>`).join('');
 }
 
 function formatDropChance(pct) {
@@ -238,13 +169,17 @@ function formatDropChance(pct) {
   return p < 0.01 ? '< 0.01%' : p.toFixed(2) + '%';
 }
 
-// ── Screenshot upload to Supabase Storage ──
-async function uploadScreenshot(entry, file) {
-  const ext  = file.type === 'image/png' ? 'png' : 'jpg';
-  const path = `${entry}.${ext}`;
-  const url  = `${SUPABASE_URL}/storage/v1/object/screenshots/${path}`;
-  const res  = await fetch(url, {
-    method:  'POST',
+async function urlExists(url) {
+  try {
+    const r = await fetch(url, { method: 'HEAD' });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function uploadToStorage(path, file) {
+  const url = `${SUPABASE_URL}/storage/v1/object/screenshots/${path}`;
+  const res = await fetch(url, {
+    method: 'POST',
     headers: {
       'apikey':        ANON_KEY,
       'Authorization': `Bearer ${ANON_KEY}`,
@@ -253,87 +188,85 @@ async function uploadScreenshot(entry, file) {
     },
     body: file,
   });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  return `${SCREENSHOTS_URL}/screenshots/${path}`;
-}
-
-async function checkExistingScreenshot(entry) {
-  // Try png then jpg
-  for (const ext of ['png', 'jpg']) {
-    const url = `${SCREENSHOTS_URL}/screenshots/${entry}.${ext}`;
-    try {
-      const res = await fetch(url, { method: 'HEAD' });
-      if (res.ok) return url;
-    } catch(e) {}
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`${res.status}: ${err}`);
   }
-  return null;
 }
 
-// ── Screenshot UI ──
 async function initScreenshot(entry) {
   const area     = document.getElementById('ss-area');
   const label    = document.getElementById('ss-label');
   const img      = document.getElementById('ss-img');
-  const removeBtn= document.getElementById('ss-remove');
-  const fileInput= document.getElementById('screenshot-file-input');
+  const badge    = document.getElementById('ss-badge');
   const status   = document.getElementById('ss-status');
+  const fileInput= document.getElementById('screenshot-file-input');
 
-  function showImage(url) {
+  function showImage(url, isPending=false) {
     img.src = url;
     img.style.display = 'block';
     label.style.display = 'none';
-    if (status) status.textContent = '';
+    if (badge) badge.style.display = isPending ? 'block' : 'none';
   }
 
   function showUpload() {
     img.style.display = 'none';
     label.style.display = 'flex';
+    if (badge) badge.style.display = 'none';
   }
 
   function setStatus(msg, color='var(--text-muted)') {
-    if (status) { status.textContent = msg; status.style.color = color; }
+    status.textContent = msg;
+    status.style.color = color;
   }
 
-  // Check if screenshot already exists in Supabase
-  setStatus('Checking for screenshot...');
-  const existing = await checkExistingScreenshot(entry);
-  if (existing) { showImage(existing); } else { showUpload(); }
+  // Check approved first, then pending
+  setStatus('');
+  const approvedUrl = `${STORAGE_PUB}/approved/${entry}.png`;
+  const pendingUrl  = `${STORAGE_PUB}/pending/${entry}.png`;
+
+  if (await urlExists(approvedUrl)) {
+    showImage(approvedUrl);
+  } else if (await urlExists(pendingUrl)) {
+    showImage(pendingUrl + '?t=' + Date.now(), true);
+    setStatus('Awaiting approval', 'var(--yellow-dim)');
+  } else {
+    showUpload();
+  }
 
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     setStatus('Uploading...', 'var(--yellow)');
     try {
-      const url = await uploadScreenshot(entry, file);
-      showImage(url + '?t=' + Date.now());
-      setStatus('Uploaded! Visible to all users.', '#4fc34f');
-      setTimeout(() => setStatus(''), 3000);
+      await uploadToStorage(`pending/${entry}.png`, file);
+      showImage(pendingUrl + '?t=' + Date.now(), true);
+      setStatus('Submitted! Awaiting approval.', '#4fc34f');
+      setTimeout(() => setStatus('Awaiting approval', 'var(--yellow-dim)'), 3000);
     } catch(e) {
-      setStatus('Upload failed: ' + e.message, '#e88');
+      setStatus('Upload failed. Try again.', '#e88');
+      console.error(e);
     }
     fileInput.value = '';
   }
 
-  // Click area to upload
-  area.addEventListener('click', (e) => {
-    if (e.target === removeBtn) return;
-    if (img.style.display !== 'none') return;
-    fileInput.click();
+  // Click label to upload
+  label.addEventListener('click', () => fileInput.click());
+
+  // Click pending image to replace
+  img.addEventListener('click', () => {
+    if (badge && badge.style.display !== 'none') fileInput.click();
   });
-
-  // Replace button (click on existing image)
-  img.addEventListener('click', () => fileInput.click());
   img.style.cursor = 'pointer';
-  img.title = 'Click to replace screenshot';
+  img.title = 'Click to submit a new screenshot';
 
-  // File selected
   fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
 
   // Drag and drop
-  area.addEventListener('dragover', (e) => { e.preventDefault(); label.style.borderColor = 'var(--red)'; });
-  area.addEventListener('dragleave', () => { label.style.borderColor = ''; });
+  area.addEventListener('dragover', (e) => { e.preventDefault(); if(label.style.display!=='none') label.style.borderColor='var(--red)'; });
+  area.addEventListener('dragleave', () => { label.style.borderColor=''; });
   area.addEventListener('drop', (e) => {
     e.preventDefault();
-    label.style.borderColor = '';
+    label.style.borderColor='';
     handleFile(e.dataTransfer.files[0]);
   });
 }
@@ -342,26 +275,22 @@ function renderItem(data) {
   const entry       = data.entry;
   const rarityClass = RARITY_CLASS[data.rarity_name] || '';
   const statsHtml   = data.stats_parsed && Object.keys(data.stats_parsed).length
-    ? `<div class="stats-section">
-        <div class="stats-section-title">Stats</div>
-        <div class="stats-grid">${formatStats(data.stats_parsed)}</div>
-      </div>` : '';
+    ? `<div class="stats-section"><div class="stats-section-title">Stats</div>
+       <div class="stats-grid">${formatStats(data.stats_parsed)}</div></div>` : '';
 
   const droppedBy = data.dropped_by || [];
   const soldBy    = data.sold_by    || [];
-
   const droppedRows = droppedBy.length
-    ? droppedBy.map(n => `<tr>
+    ? droppedBy.map(n=>`<tr>
         <td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name||'Unknown'}</a></td>
         <td>${formatDropChance(n.drop_chance)||'—'}</td>
         <td>${n.minlevel||''}${n.maxlevel&&n.maxlevel!==n.minlevel?'–'+n.maxlevel:''}</td>
       </tr>`).join('')
     : `<tr><td colspan="3"><div class="empty-state">No drop sources found</div></td></tr>`;
-
   const soldRows = soldBy.length
-    ? soldBy.map(n => `<tr>
+    ? soldBy.map(n=>`<tr>
         <td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name||'Unknown'}</a></td>
-        <td>${n.price ? n.price.toLocaleString() : '—'}</td>
+        <td>${n.price?n.price.toLocaleString():'—'}</td>
         <td>${n.zone||'—'}</td>
       </tr>`).join('')
     : `<tr><td colspan="3"><div class="empty-state">Not sold by any vendor</div></td></tr>`;
@@ -370,9 +299,7 @@ function renderItem(data) {
   document.title = `${data.display_name} - WAR Database`;
 
   const icon = data.iconid ? `${ICONS_URL}/icon_${data.iconid}.png` : null;
-  const iconHtml = icon
-    ? `<img class="item-icon" src="${icon}" alt="icon" onerror="this.style.display='none'">`
-    : '';
+  const iconHtml = icon ? `<img class="item-icon" src="${icon}" alt="icon" onerror="this.style.display='none'">` : '';
   const iconRowHtml = iconHtml
     ? `<div class="item-icon-row">${iconHtml}<span class="item-icon-label">${data.slot_name||data.type_name||''}</span></div>`
     : '';
@@ -380,8 +307,6 @@ function renderItem(data) {
   document.getElementById('content').innerHTML = `
     <div class="entity-header" style="padding:0;overflow:hidden;">
       <div class="item-layout">
-
-        <!-- Left: screenshot upload + icon -->
         <div class="item-render-panel">
           <div class="screenshot-area" id="ss-area">
             <img class="screenshot-img" id="ss-img" style="display:none" alt="screenshot">
@@ -389,72 +314,34 @@ function renderItem(data) {
               <span class="screenshot-upload-icon">📷</span>
               <span class="screenshot-upload-text">Click or drag to upload<br>a screenshot</span>
             </label>
-            <button class="screenshot-remove-btn" id="ss-remove">✕ Remove</button>
           </div>
-          <div id="ss-status" style="font-size:11px;font-style:italic;text-align:center;color:var(--text-muted);min-height:16px;"></div>
+          <div class="ss-pending-badge" id="ss-badge" style="display:none">⏳ Pending approval</div>
+          <div id="ss-status"></div>
           ${iconRowHtml}
         </div>
-
-        <!-- Right: item details -->
         <div class="item-info-panel">
           <div class="entity-name ${rarityClass}">${data.display_name||'Unknown Item'}</div>
           <div class="item-details">
-            ${data.rarity_name ? `<div class="item-detail-row">
-              <span class="detail-label">Rarity</span>
-              <span class="detail-value ${rarityClass}">${data.rarity_name}</span>
-            </div>` : ''}
-            ${data.type_name ? `<div class="item-detail-row">
-              <span class="detail-label">Type</span>
-              <span class="detail-value">${data.type_name}</span>
-            </div>` : ''}
-            ${data.slot_name && data.slot_name !== 'None' ? `<div class="item-detail-row">
-              <span class="detail-label">Slot</span>
-              <span class="detail-value">${data.slot_name}</span>
-            </div>` : ''}
-            ${data.minrank ? `<div class="item-detail-row">
-              <span class="detail-label">Min Rank</span>
-              <span class="detail-value">${data.minrank}</span>
-            </div>` : ''}
-            ${data.armor ? `<div class="item-detail-row">
-              <span class="detail-label">Armor</span>
-              <span class="detail-value">${data.armor}</span>
-            </div>` : ''}
-            ${data.dps ? `<div class="item-detail-row">
-              <span class="detail-label">DPS</span>
-              <span class="detail-value">${(data.dps/1000).toFixed(1)}</span>
-            </div>` : ''}
-            <div class="item-detail-row">
-              <span class="detail-label">Entry</span>
-              <span class="detail-value" style="color:var(--text-muted);font-size:12px">#${entry}</span>
-            </div>
+            ${data.rarity_name?`<div class="item-detail-row"><span class="detail-label">Rarity</span><span class="detail-value ${rarityClass}">${data.rarity_name}</span></div>`:''}
+            ${data.type_name?`<div class="item-detail-row"><span class="detail-label">Type</span><span class="detail-value">${data.type_name}</span></div>`:''}
+            ${data.slot_name&&data.slot_name!=='None'?`<div class="item-detail-row"><span class="detail-label">Slot</span><span class="detail-value">${data.slot_name}</span></div>`:''}
+            ${data.minrank?`<div class="item-detail-row"><span class="detail-label">Min Rank</span><span class="detail-value">${data.minrank}</span></div>`:''}
+            ${data.armor?`<div class="item-detail-row"><span class="detail-label">Armor</span><span class="detail-value">${data.armor}</span></div>`:''}
+            ${data.dps?`<div class="item-detail-row"><span class="detail-label">DPS</span><span class="detail-value">${(data.dps/1000).toFixed(1)}</span></div>`:''}
+            <div class="item-detail-row"><span class="detail-label">Entry</span><span class="detail-value" style="color:var(--text-muted);font-size:12px">#${entry}</span></div>
           </div>
           ${statsHtml}
-          ${data.description ? `<div class="entity-desc">${data.description}</div>` : ''}
+          ${data.description?`<div class="entity-desc">${data.description}</div>`:''}
         </div>
-
       </div>
     </div>
-
     <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Dropped By</span>
-        <span class="panel-count">${droppedBy.length}</span>
-      </div>
-      <table>
-        <thead><tr><th>NPC</th><th>Drop Chance</th><th>Level</th></tr></thead>
-        <tbody>${droppedRows}</tbody>
-      </table>
+      <div class="panel-header"><span class="panel-title">Dropped By</span><span class="panel-count">${droppedBy.length}</span></div>
+      <table><thead><tr><th>NPC</th><th>Drop Chance</th><th>Level</th></tr></thead><tbody>${droppedRows}</tbody></table>
     </div>
-
     <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">Sold By</span>
-        <span class="panel-count">${soldBy.length}</span>
-      </div>
-      <table>
-        <thead><tr><th>Vendor</th><th>Price</th><th>Zone</th></tr></thead>
-        <tbody>${soldRows}</tbody>
-      </table>
+      <div class="panel-header"><span class="panel-title">Sold By</span><span class="panel-count">${soldBy.length}</span></div>
+      <table><thead><tr><th>Vendor</th><th>Price</th><th>Zone</th></tr></thead><tbody>${soldRows}</tbody></table>
     </div>`;
 
   initScreenshot(entry);
@@ -462,17 +349,13 @@ function renderItem(data) {
 
 async function load() {
   const entry = getEntry();
-  if (!entry) {
-    document.getElementById('content').innerHTML = `<div class="error-box">No item entry specified.</div>`;
-    return;
-  }
+  if (!entry) { document.getElementById('content').innerHTML=`<div class="error-box">No item entry specified.</div>`; return; }
   try {
     const res = await fetch(`${API}/item_detail?entry=${entry}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     renderItem(await res.json());
   } catch(e) {
-    document.getElementById('content').innerHTML =
-      `<div class="error-box">Failed to load item: ${e.message}</div>`;
+    document.getElementById('content').innerHTML=`<div class="error-box">Failed to load item: ${e.message}</div>`;
   }
 }
 load();
