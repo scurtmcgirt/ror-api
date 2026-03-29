@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPCs - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a>
+    <a href="npcs.html" class="active">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="page-title">NPCs</div>
+  <div class="filters">
+    <input class="filter-input" type="text" id="search" placeholder="Search NPCs..." onkeydown="if(event.key==='Enter')applyFilters()">
+    <select class="filter-input" id="faction">
+      <option value="">All Factions</option>
+      <option value="1">Order</option>
+      <option value="2">Destruction</option>
+      <option value="0">Neutral</option>
+    </select>
+    <button class="btn" onclick="applyFilters()">Filter</button>
+  </div>
+</div>
+<div class="container-full">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Level</th><th>Faction</th><th>Type</th></tr></thead>
+      <tbody id="npcs-body"><tr><td colspan="4"><div class="loading-inline"><span class="spinner"></span>Loading NPCs...</div></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+let currentPage=1;
+const LIMIT=50;
+const FACTION={0:'Neutral',1:'Order',2:'Destruction'};
+const FACTION_CLASS={0:'faction-neutral',1:'faction-order',2:'faction-dest'};
+async function loadNPCs(page=1){
+  currentPage=page;
+  const search=document.getElementById('search').value.trim();
+  const faction=document.getElementById('faction').value;
+  let url=`${API}/npcs?page=${page}&limit=${LIMIT}`;
+  if(search) url+=`&search=${encodeURIComponent(search)}`;
+  if(faction!=='') url+=`&faction=${faction}`;
+  document.getElementById('npcs-body').innerHTML=`<tr><td colspan="4"><div class="loading-inline"><span class="spinner"></span>Loading...</div></td></tr>`;
+  try{
+    const res=await fetch(url);
+    const rows=await res.json();
+    if(!rows.length){document.getElementById('npcs-body').innerHTML=`<tr><td colspan="4"><div class="loading">No NPCs found</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+    const lvl=n=>n.minlevel===n.maxlevel?n.minlevel:`${n.minlevel}–${n.maxlevel}`;
+    document.getElementById('npcs-body').innerHTML=rows.map(n=>`<tr>
+      <td><a class="npc-link" href="npc.html?entry=${n.entry}">${n.display_name}</a></td>
+      <td>${n.minlevel?`<span class="badge">${lvl(n)}</span>`:'—'}</td>
+      <td class="${FACTION_CLASS[n.faction||0]}">${FACTION[n.faction||0]||'Neutral'}</td>
+      <td>${n.creaturetype||'—'}</td>
+    </tr>`).join('');
+    const hasMore=rows.length===LIMIT;
+    document.getElementById('pagination').innerHTML=`
+      <button class="page-btn" onclick="loadNPCs(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+      <span class="page-info">Page ${page}</span>
+      <button class="page-btn" onclick="loadNPCs(${page+1})" ${!hasMore?'disabled':''}>Next →</button>`;
+  }catch(e){document.getElementById('npcs-body').innerHTML=`<tr><td colspan="4"><div class="loading">Error: ${e.message}</div></td></tr>`;}
+}
+function applyFilters(){loadNPCs(1);}
+loadNPCs(1);
+</script>
+</body>
+</html>

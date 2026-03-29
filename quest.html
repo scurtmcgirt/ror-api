@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quest - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html" class="active">Quests</a>
+    <a href="zones.html">Zones</a><a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <a href="quests.html">Quests</a><span>›</span>
+  <span id="breadcrumb-name">Loading...</span>
+</div>
+<div class="container">
+  <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading quest...</div></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+const RARITY_CLASS={'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare','Very Rare':'rarity-Very Rare','Artifact':'rarity-Artifact','Sovereign':'rarity-Sovereign'};
+function getEntry(){return new URLSearchParams(window.location.search).get('entry');}
+
+function renderQuest(data){
+  const q=data.quest;
+  const objectives=data.objectives||[];
+  const startNPCs=data.start_npcs||[];
+  const finishNPCs=data.finish_npcs||[];
+  const rewards=data.rewards||[];
+
+  document.getElementById('breadcrumb-name').textContent=q.display_name||`Quest #${q.entry}`;
+  document.title=`${q.display_name} - WAR Database`;
+
+  const objRows=objectives.length
+    ?objectives.map((o,i)=>`<tr><td><span class="stage-badge">${i+1}</span>${o.description||'—'}</td><td>${o.objcount||'—'}</td></tr>`).join('')
+    :`<tr><td colspan="2"><div class="empty-state">No objectives found</div></td></tr>`;
+
+  const startRows=startNPCs.length
+    ?startNPCs.map(n=>`<tr><td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name}</a></td><td>${n.zone||'—'}</td></tr>`).join('')
+    :`<tr><td colspan="2"><div class="empty-state">No starter NPC found</div></td></tr>`;
+
+  const finishRows=finishNPCs.length
+    ?finishNPCs.map(n=>`<tr><td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name}</a></td></tr>`).join('')
+    :`<tr><td><div class="empty-state">No finisher NPC found</div></td></tr>`;
+
+  const rewardRows=rewards.length
+    ?rewards.map(i=>`<tr>
+      <td><a class="link ${RARITY_CLASS[i.rarity_name]||''}" href="item.html?entry=${i.entry}">${i.display_name}</a></td>
+      <td class="${RARITY_CLASS[i.rarity_name]||''}">${i.rarity_name}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="2"><div class="empty-state">No item rewards</div></td></tr>`;
+
+  document.getElementById('content').innerHTML=`
+    <div class="entity-header">
+      <div class="entity-name">${q.display_name}</div>
+      <div class="entity-meta">
+        ${q.level?`<span>Level <strong>${q.level}</strong></span>`:''}
+        ${q.xp?`<span class="xp-text">⭐ ${q.xp.toLocaleString()} XP</span>`:''}
+        ${q.gold?`<span>💰 ${q.gold} Gold</span>`:''}
+        <span style="color:var(--text-muted);font-size:12px">Entry #${q.entry}</span>
+      </div>
+      ${q.description?`<div class="entity-desc">${q.description}</div>`:''}
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Objectives</span><span class="panel-count">${objectives.length}</span></div>
+      <table><thead><tr><th>Description</th><th>Count</th></tr></thead><tbody>${objRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Started By</span><span class="panel-count">${startNPCs.length}</span></div>
+      <table><thead><tr><th>NPC</th><th>Zone</th></tr></thead><tbody>${startRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Completed With</span><span class="panel-count">${finishNPCs.length}</span></div>
+      <table><thead><tr><th>NPC</th></tr></thead><tbody>${finishRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Item Rewards</span><span class="panel-count">${rewards.length}</span></div>
+      <table><thead><tr><th>Item</th><th>Rarity</th></tr></thead><tbody>${rewardRows}</tbody></table>
+    </div>`;
+}
+
+async function load(){
+  const entry=getEntry();
+  if(!entry){document.getElementById('content').innerHTML=`<div class="error-box">No quest entry specified.</div>`;return;}
+  try{
+    const res=await fetch(`${API}/quest/${entry}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderQuest(await res.json());
+  }catch(e){document.getElementById('content').innerHTML=`<div class="error-box">Failed to load quest: ${e.message}</div>`;}
+}
+load();
+</script>
+</body>
+</html>

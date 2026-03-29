@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Item - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* ── ITEM HEADER LAYOUT ── */
+  .item-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  /* ── RENDER PANEL ── */
+  .item-render-panel {
+    background: linear-gradient(180deg, #0a0800 0%, #120f04 100%);
+    border-right: 1px solid var(--border-red);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    gap: 12px;
+    min-height: 260px;
+    justify-content: center;
+    position: relative;
+  }
+
+  .item-render-panel::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--red-dim), transparent);
+  }
+
+  .item-3d-render {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    image-rendering: auto;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.8));
+    transition: transform 0.3s ease;
+  }
+
+  .item-3d-render:hover {
+    transform: scale(1.05);
+  }
+
+  .render-placeholder {
+    width: 180px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border-red);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  /* ── ICON + LABEL ── */
+  .item-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .item-icon {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-red);
+    background: var(--bg4);
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .item-icon-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    font-family: 'Crimson Text', serif;
+  }
+
+  /* ── ITEM INFO PANEL ── */
+  .item-info-panel {
+    padding: 24px;
+  }
+
+  .item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .item-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .detail-label {
+    color: var(--text-muted);
+    font-style: italic;
+    min-width: 80px;
+    font-size: 13px;
+  }
+
+  .detail-value { color: var(--text-bright); }
+
+  .stats-section {
+    margin-top: 14px;
+    border-top: 1px solid var(--border-red);
+    padding-top: 12px;
+  }
+
+  .stats-section-title {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* ── RENDER TOGGLE ── */
+  .render-toggle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: 'Crimson Text', serif;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-color: var(--border-red);
+  }
+
+  .render-toggle:hover { color: var(--yellow); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .item-layout {
+      grid-template-columns: 1fr;
+    }
+    .item-render-panel {
+      border-right: none;
+      border-bottom: 1px solid var(--border-red);
+      min-height: auto;
+      padding: 16px;
+      flex-direction: row;
+      justify-content: flex-start;
+    }
+    .item-3d-render { width: 120px; height: 120px; }
+    .render-placeholder { width: 120px; height: 120px; }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html" class="active">Items</a>
+    <a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <a href="items.html">Items</a><span>›</span>
+  <span id="breadcrumb-name">Loading...</span>
+</div>
+<div class="container">
+  <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading item...</div></div>
+</div>
+<script>
+const API          = 'https://ror-api-production-acc5.up.railway.app';
+const STORAGE      = 'https://rmihmhpoistwtnbcecli.supabase.co/storage/v1/object/public';
+const ICONS_URL    = `${STORAGE}/icons`;
+const RENDERS_URL  = `${STORAGE}/renders`;
+
+const RARITY_CLASS = {
+  'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare',
+  'Very Rare':'rarity-Very Rare','Artifact':'rarity-Artifact','Sovereign':'rarity-Sovereign'
+};
+
+function getEntry() { return new URLSearchParams(window.location.search).get('entry'); }
+
+function formatStats(obj) {
+  if (!obj || !Object.keys(obj).length) return '';
+  return Object.entries(obj)
+    .filter(([k,v]) => v && v !== 0)
+    .map(([k,v]) => `<div class="stat-row">${v} ${k}</div>`)
+    .join('');
+}
+
+function formatDropChance(pct) {
+  if (!pct) return '';
+  const p = parseFloat(pct);
+  return p < 0.01 ? '< 0.01%' : p.toFixed(2) + '%';
+}
+
+function iconUrl(iconid) {
+  if (!iconid) return null;
+  return `${ICONS_URL}/icon_${iconid}.png`;
+}
+
+function renderUrl(modelImage) {
+  if (!modelImage) return null;
+  // model_image is stored as "fg.0.0.dwm_armor_hvy_01.png"
+  return `${RENDERS_URL}/${modelImage}`;
+}
+
+function renderItem(data) {
+  const rarityClass  = RARITY_CLASS[data.rarity_name] || '';
+  const statsHtml    = data.stats_parsed && Object.keys(data.stats_parsed).length
+    ? `<div class="stats-section">
+        <div class="stats-section-title">Stats</div>
+        <div class="stats-grid">${formatStats(data.stats_parsed)}</div>
+      </div>` : '';
+
+  const droppedBy  = data.dropped_by || [];
+  const soldBy     = data.sold_by    || [];
+
+  const droppedRows = droppedBy.length
+    ? droppedBy.map(n => `<tr>
+        <td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name||'Unknown'}</a></td>
+        <td>${formatDropChance(n.drop_chance)||'—'}</td>
+        <td>${n.minlevel||''}${n.maxlevel&&n.maxlevel!==n.minlevel?'–'+n.maxlevel:''}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="3"><div class="empty-state">No drop sources found</div></td></tr>`;
+
+  const soldRows = soldBy.length
+    ? soldBy.map(n => `<tr>
+        <td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name||'Unknown'}</a></td>
+        <td>${n.price ? n.price.toLocaleString() : '—'}</td>
+        <td>${n.zone||'—'}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="3"><div class="empty-state">Not sold by any vendor</div></td></tr>`;
+
+  document.getElementById('breadcrumb-name').textContent = data.display_name || `Item #${data.entry}`;
+  document.title = `${data.display_name} - WAR Database`;
+
+  // ── Build icon and render HTML ──
+  const icon    = iconUrl(data.iconid);
+  const render  = renderUrl(data.model_image);
+
+  const iconHtml = icon
+    ? `<img class="item-icon" src="${icon}" alt="icon"
+         onerror="this.style.display='none'">`
+    : '';
+
+  const renderHtml = render
+    ? `<img class="item-3d-render" src="${render}" alt="3D render"
+         onerror="this.parentElement.innerHTML='<div class=\\'render-placeholder\\'>No render available</div>'">`
+    : `<div class="render-placeholder">No render available</div>`;
+
+  const iconLabelHtml = icon
+    ? `<div class="item-icon-row">
+        ${iconHtml}
+        <span class="item-icon-label">${data.slot_name||data.type_name||''}</span>
+      </div>`
+    : '';
+
+  document.getElementById('content').innerHTML = `
+    <div class="entity-header" style="padding:0;overflow:hidden;">
+      <div class="item-layout">
+
+        <!-- Left: 3D render + icon -->
+        <div class="item-render-panel">
+          ${renderHtml}
+          ${iconLabelHtml}
+        </div>
+
+        <!-- Right: item details -->
+        <div class="item-info-panel">
+          <div class="entity-name ${rarityClass}">${data.display_name||'Unknown Item'}</div>
+          <div class="item-details">
+            ${data.rarity_name ? `<div class="item-detail-row">
+              <span class="detail-label">Rarity</span>
+              <span class="detail-value ${rarityClass}">${data.rarity_name}</span>
+            </div>` : ''}
+            ${data.type_name ? `<div class="item-detail-row">
+              <span class="detail-label">Type</span>
+              <span class="detail-value">${data.type_name}</span>
+            </div>` : ''}
+            ${data.slot_name && data.slot_name !== 'None' ? `<div class="item-detail-row">
+              <span class="detail-label">Slot</span>
+              <span class="detail-value">${data.slot_name}</span>
+            </div>` : ''}
+            ${data.minrank ? `<div class="item-detail-row">
+              <span class="detail-label">Min Rank</span>
+              <span class="detail-value">${data.minrank}</span>
+            </div>` : ''}
+            ${data.armor ? `<div class="item-detail-row">
+              <span class="detail-label">Armor</span>
+              <span class="detail-value">${data.armor}</span>
+            </div>` : ''}
+            ${data.dps ? `<div class="item-detail-row">
+              <span class="detail-label">DPS</span>
+              <span class="detail-value">${(data.dps/1000).toFixed(1)}</span>
+            </div>` : ''}
+            <div class="item-detail-row">
+              <span class="detail-label">Entry</span>
+              <span class="detail-value" style="color:var(--text-muted);font-size:12px">#${data.entry}</span>
+            </div>
+          </div>
+          ${statsHtml}
+          ${data.description ? `<div class="entity-desc">${data.description}</div>` : ''}
+        </div>
+
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Dropped By</span>
+        <span class="panel-count">${droppedBy.length}</span>
+      </div>
+      <table>
+        <thead><tr><th>NPC</th><th>Drop Chance</th><th>Level</th></tr></thead>
+        <tbody>${droppedRows}</tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Sold By</span>
+        <span class="panel-count">${soldBy.length}</span>
+      </div>
+      <table>
+        <thead><tr><th>Vendor</th><th>Price</th><th>Zone</th></tr></thead>
+        <tbody>${soldRows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function load() {
+  const entry = getEntry();
+  if (!entry) {
+    document.getElementById('content').innerHTML = `<div class="error-box">No item entry specified.</div>`;
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/item_detail?entry=${entry}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderItem(await res.json());
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      `<div class="error-box">Failed to load item: ${e.message}</div>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

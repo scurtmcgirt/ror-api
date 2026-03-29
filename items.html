@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Items - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html" class="active">Items</a>
+    <a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-title">Items</div>
+  <div class="filters">
+    <input class="filter-input" type="text" id="search" placeholder="Search items..." onkeydown="if(event.key==='Enter')applyFilters()">
+    <select class="filter-input" id="rarity">
+      <option value="">All Rarities</option>
+      <option value="0">Common</option>
+      <option value="1">Uncommon</option>
+      <option value="2">Rare</option>
+      <option value="3">Very Rare</option>
+      <option value="4">Artifact</option>
+      <option value="5">Sovereign</option>
+    </select>
+    <select class="filter-input" id="type">
+      <option value="">All Types</option>
+      <option value="0">Heavy Armor</option>
+      <option value="1">Medium Armor</option>
+      <option value="6">Light Armor</option>
+      <option value="18">Light Armor</option>
+      <option value="20">Heavy Armor</option>
+      <option value="22">Medium Armor</option>
+      <option value="2">One-Hand Weapon</option>
+      <option value="3">Two-Hand Weapon</option>
+      <option value="4">Shield</option>
+      <option value="7">Ranged Weapon</option>
+      <option value="8">Accessory</option>
+      <option value="16">Trophy</option>
+      <option value="17">Quest Item</option>
+      <option value="24">Enhancement</option>
+      <option value="35">Talisman</option>
+    </select>
+    <button class="btn" onclick="applyFilters()">Filter</button>
+  </div>
+</div>
+
+<div class="container-full">
+  <div id="result-count" class="result-count"></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Rarity</th>
+          <th>Type</th>
+          <th>Slot</th>
+          <th>Rank</th>
+        </tr>
+      </thead>
+      <tbody id="items-body">
+        <tr><td colspan="5"><div class="loading-inline"><span class="spinner"></span>Loading items...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+const API = 'https://ror-api-production-acc5.up.railway.app';
+let currentPage = 1;
+const LIMIT = 50;
+const RARITY_CLASS = {'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare','Very Rare':'rarity-Very Rare','Artifact':'rarity-Artifact','Sovereign':'rarity-Sovereign'};
+
+async function loadItems(page=1) {
+  currentPage = page;
+  const search = document.getElementById('search').value.trim();
+  const rarity = document.getElementById('rarity').value;
+  const type   = document.getElementById('type').value;
+  let url = `${API}/items?page=${page}&limit=${LIMIT}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (rarity !== '') url += `&rarity=${rarity}`;
+  if (type   !== '') url += `&type=${type}`;
+  document.getElementById('items-body').innerHTML = `<tr><td colspan="5"><div class="loading-inline"><span class="spinner"></span>Loading...</div></td></tr>`;
+  try {
+    const res  = await fetch(url);
+    const rows = await res.json();
+    if (!rows.length) {
+      document.getElementById('items-body').innerHTML = `<tr><td colspan="5"><div class="loading">No items found</div></td></tr>`;
+      document.getElementById('result-count').textContent = '';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    document.getElementById('result-count').textContent = `Showing ${(page-1)*LIMIT+1}–${(page-1)*LIMIT+rows.length} items`;
+    document.getElementById('items-body').innerHTML = rows.map(item => `
+      <tr>
+        <td><a class="item-link ${RARITY_CLASS[item.rarity_name]||''}" href="item.html?entry=${item.entry}">${item.display_name}</a></td>
+        <td class="${RARITY_CLASS[item.rarity_name]||''}">${item.rarity_name}</td>
+        <td>${item.type_name || '—'}</td>
+        <td>${item.slot_name && item.slot_name !== 'None' ? item.slot_name : '—'}</td>
+        <td>${item.minrank ? `<span class="badge">${item.minrank}</span>` : '—'}</td>
+      </tr>
+    `).join('');
+    const hasMore = rows.length === LIMIT;
+    document.getElementById('pagination').innerHTML = `
+      <button class="page-btn" onclick="loadItems(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+      <span class="page-info">Page ${page}</span>
+      <button class="page-btn" onclick="loadItems(${page+1})" ${!hasMore?'disabled':''}>Next →</button>`;
+  } catch(e) {
+    document.getElementById('items-body').innerHTML = `<tr><td colspan="5"><div class="loading">Error: ${e.message}</div></td></tr>`;
+  }
+}
+function applyFilters() { loadItems(1); }
+loadItems(1);
+</script>
+</body>
+</html>

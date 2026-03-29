@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .hero {
+    text-align: center;
+    padding: 70px 24px 50px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(139,26,26,0.1) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-family: 'IM Fell English', serif;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+  .hero-title {
+    font-family: 'Uncial Antiqua', serif;
+    font-size: clamp(28px, 5vw, 52px);
+    color: var(--red-light);
+    line-height: 1.15;
+    margin-bottom: 12px;
+    text-shadow: 0 0 40px rgba(192,57,43,0.25), 0 2px 4px rgba(0,0,0,0.8);
+  }
+  .hero-subtitle {
+    color: var(--text-dim);
+    font-size: 17px;
+    font-style: italic;
+    margin-bottom: 44px;
+  }
+  .search-bar {
+    display: flex;
+    max-width: 580px;
+    margin: 0 auto 60px;
+  }
+  .search-bar input {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border-red);
+    border-right: none;
+    color: var(--text-bright);
+    padding: 12px 18px;
+    font-family: 'IM Fell English', serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-bar input:focus { border-color: var(--red); }
+  .search-bar input::placeholder { color: var(--text-muted); }
+  .search-bar button {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--text-bright);
+    padding: 12px 26px;
+    font-family: 'Uncial Antiqua', serif;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .search-bar button:hover { background: var(--red); }
+
+  .nav-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 20px 70px;
+  }
+  .nav-card {
+    background: var(--bg2);
+    border: 1px solid var(--border-red);
+    padding: 24px 18px;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .nav-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--red-dim), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .nav-card:hover { border-color: var(--red); background: var(--bg3); }
+  .nav-card:hover::before { opacity: 1; }
+  .nav-card-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+  .nav-card-title { font-family: 'Uncial Antiqua', serif; font-size: 14px; color: var(--red-light); margin-bottom: 5px; }
+  .nav-card-desc { font-size: 12px; color: var(--text-dim); font-style: italic; }
+
+  #search-results {
+    max-width: 760px;
+    margin: 0 auto 36px;
+    padding: 0 20px;
+    display: none;
+  }
+
+  footer {
+    border-top: 1px solid var(--border-red);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a>
+    <a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">Warhammer Online</div>
+  <h1 class="hero-title">Return of Reckoning<br>Database</h1>
+  <p class="hero-subtitle">Items, NPCs, Quests, Zones & more</p>
+  <form class="search-bar" onsubmit="doSearch(event)">
+    <input type="text" id="search-input" placeholder="Search items, NPCs, quests, zones..." autocomplete="off">
+    <button type="submit">Search</button>
+  </form>
+</div>
+
+<div id="search-results"></div>
+
+<div class="nav-cards">
+  <a class="nav-card" href="items.html">
+    <span class="nav-card-icon">⚔️</span>
+    <div class="nav-card-title">Items</div>
+    <div class="nav-card-desc">76,000+ weapons, armor & more</div>
+  </a>
+  <a class="nav-card" href="npcs.html">
+    <span class="nav-card-icon">👹</span>
+    <div class="nav-card-title">NPCs</div>
+    <div class="nav-card-desc">7,200+ creatures & vendors</div>
+  </a>
+  <a class="nav-card" href="quests.html">
+    <span class="nav-card-icon">📜</span>
+    <div class="nav-card-title">Quests</div>
+    <div class="nav-card-desc">Browse all quests & rewards</div>
+  </a>
+  <a class="nav-card" href="zones.html">
+    <span class="nav-card-icon">🗺️</span>
+    <div class="nav-card-title">Zones</div>
+    <div class="nav-card-desc">All zones across the Old World</div>
+  </a>
+  <a class="nav-card" href="pqs.html">
+    <span class="nav-card-icon">⚜️</span>
+    <div class="nav-card-title">Public Quests</div>
+    <div class="nav-card-desc">558 public quests</div>
+  </a>
+</div>
+
+<footer>WAR: Return of Reckoning Database — Community Resource</footer>
+
+<script>
+const API = 'https://ror-api-production-acc5.up.railway.app';
+function rarityClass(r) {
+  const map = {'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare','Very Rare':'rarity-Very Rare','Artifact':'rarity-Artifact','Sovereign':'rarity-Sovereign'};
+  return map[r] || 'rarity-Common';
+}
+async function doSearch(e) {
+  e.preventDefault();
+  const q = document.getElementById('search-input').value.trim();
+  if (q.length < 2) return;
+  const el = document.getElementById('search-results');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="loading">Searching...</div>';
+  try {
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=8`);
+    const data = await res.json();
+    let html = '';
+    if (data.results.items.length) {
+      html += `<div class="result-section"><div class="result-section-title">Items (${data.results.items.length})</div>`;
+      data.results.items.forEach(item => {
+        html += `<a class="result-item" href="item.html?entry=${item.entry}">
+          <span class="result-name ${rarityClass(item.rarity_name)}">${item.display_name}</span>
+          <span class="result-meta">${item.rarity_name} · Rank ${item.minrank || 0}</span>
+        </a>`;
+      });
+      html += '</div>';
+    }
+    if (data.results.npcs.length) {
+      html += `<div class="result-section"><div class="result-section-title">NPCs (${data.results.npcs.length})</div>`;
+      data.results.npcs.forEach(npc => {
+        html += `<a class="result-item" href="npc.html?entry=${npc.entry}">
+          <span class="result-name">${npc.display_name}</span>
+          <span class="result-meta">Level ${npc.minlevel||'?'}${npc.maxlevel&&npc.maxlevel!==npc.minlevel?'–'+npc.maxlevel:''}</span>
+        </a>`;
+      });
+      html += '</div>';
+    }
+    if (data.results.quests.length) {
+      html += `<div class="result-section"><div class="result-section-title">Quests (${data.results.quests.length})</div>`;
+      data.results.quests.forEach(q => {
+        html += `<a class="result-item" href="quest.html?entry=${q.entry}">
+          <span class="result-name">${q.display_name}</span>
+          <span class="result-meta">Level ${q.level||'?'} · ${q.xp||0} XP</span>
+        </a>`;
+      });
+      html += '</div>';
+    }
+    if (data.results.zones.length) {
+      html += `<div class="result-section"><div class="result-section-title">Zones (${data.results.zones.length})</div>`;
+      data.results.zones.forEach(z => {
+        html += `<a class="result-item" href="zone.html?zoneid=${z.zoneid}">
+          <span class="result-name">${z.display_name}</span>
+          <span class="result-meta">Tier ${z.tier||'?'}</span>
+        </a>`;
+      });
+      html += '</div>';
+    }
+    if (!html) html = '<div class="loading">No results found</div>';
+    el.innerHTML = html;
+  } catch(err) {
+    el.innerHTML = `<div class="error-box">Search failed: ${err.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>

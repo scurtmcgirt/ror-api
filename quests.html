@@ -1,0 +1,66 @@
+<!-- quests.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quests - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html" class="active">Quests</a>
+    <a href="zones.html">Zones</a><a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="page-title">Quests</div>
+  <div class="filters">
+    <input class="filter-input" type="text" id="search" placeholder="Search quests..." onkeydown="if(event.key==='Enter')applyFilters()">
+    <input class="filter-input" type="number" id="level" placeholder="Level..." min="1" max="40" style="min-width:90px">
+    <button class="btn" onclick="applyFilters()">Filter</button>
+  </div>
+</div>
+<div class="container-full">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Level</th><th>XP Reward</th></tr></thead>
+      <tbody id="quests-body"><tr><td colspan="3"><div class="loading-inline"><span class="spinner"></span>Loading quests...</div></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+let currentPage=1;const LIMIT=50;
+async function loadQuests(page=1){
+  currentPage=page;
+  const search=document.getElementById('search').value.trim();
+  const level=document.getElementById('level').value;
+  let url=`${API}/quests?page=${page}&limit=${LIMIT}`;
+  if(search) url+=`&search=${encodeURIComponent(search)}`;
+  if(level) url+=`&level=${level}`;
+  document.getElementById('quests-body').innerHTML=`<tr><td colspan="3"><div class="loading-inline"><span class="spinner"></span>Loading...</div></td></tr>`;
+  try{
+    const rows=await(await fetch(url)).json();
+    if(!rows.length){document.getElementById('quests-body').innerHTML=`<tr><td colspan="3"><div class="loading">No quests found</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+    document.getElementById('quests-body').innerHTML=rows.map(q=>`<tr>
+      <td><a class="quest-link" href="quest.html?entry=${q.entry}">${q.display_name}</a></td>
+      <td>${q.level?`<span class="badge">${q.level}</span>`:'—'}</td>
+      <td>${q.xp?`<span class="xp-text">${q.xp.toLocaleString()} XP</span>`:'—'}</td>
+    </tr>`).join('');
+    const hasMore=rows.length===LIMIT;
+    document.getElementById('pagination').innerHTML=`
+      <button class="page-btn" onclick="loadQuests(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+      <span class="page-info">Page ${page}</span>
+      <button class="page-btn" onclick="loadQuests(${page+1})" ${!hasMore?'disabled':''}>Next →</button>`;
+  }catch(e){document.getElementById('quests-body').innerHTML=`<tr><td colspan="3"><div class="loading">Error: ${e.message}</div></td></tr>`;}
+}
+function applyFilters(){loadQuests(1);}
+loadQuests(1);
+</script>
+</body>
+</html>

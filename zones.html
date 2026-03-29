@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zones - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html" class="active">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="page-title">Zones</div>
+  <div class="filters">
+    <input class="filter-input" type="text" id="search" placeholder="Search zones..." onkeydown="if(event.key==='Enter')loadZones()">
+    <select class="filter-input" id="tier">
+      <option value="">All Tiers</option>
+      <option value="1">Tier 1</option>
+      <option value="2">Tier 2</option>
+      <option value="3">Tier 3</option>
+      <option value="4">Tier 4</option>
+    </select>
+    <button class="btn" onclick="loadZones()">Filter</button>
+  </div>
+</div>
+<div class="container-full" id="zones-container">
+  <div class="loading-inline" style="padding:48px"><span class="spinner"></span>Loading zones...</div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+async function loadZones(){
+  const search=document.getElementById('search').value.trim();
+  const tier=document.getElementById('tier').value;
+  let url=`${API}/zones`;
+  const params=[];
+  if(search) params.push(`search=${encodeURIComponent(search)}`);
+  if(tier)   params.push(`tier=${tier}`);
+  if(params.length) url+='?'+params.join('&');
+  document.getElementById('zones-container').innerHTML=`<div class="loading-inline" style="padding:48px"><span class="spinner"></span>Loading...</div>`;
+  try{
+    const zones=await(await fetch(url)).json();
+    if(!zones.length){document.getElementById('zones-container').innerHTML=`<div class="loading">No zones found</div>`;return;}
+    const byTier={};
+    zones.forEach(z=>{const t=z.tier||0;if(!byTier[t])byTier[t]=[];byTier[t].push(z);});
+    let html='<div style="padding:0 0 40px">';
+    Object.keys(byTier).sort((a,b)=>a-b).forEach(tier=>{
+      html+=`<div class="tier-group"><div class="tier-heading">Tier ${tier}</div><div class="zone-grid">`;
+      byTier[tier].forEach(z=>{
+        html+=`<a class="zone-card" href="zone.html?zoneid=${z.zoneid}">
+          <div class="zone-card-name">${z.display_name}</div>
+          <div class="zone-card-meta">Lvl ${z.minlevel||'?'}–${z.maxlevel||'?'}${z.region?` · Region ${z.region}`:''}</div>
+        </a>`;
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+    document.getElementById('zones-container').innerHTML=html;
+  }catch(e){document.getElementById('zones-container').innerHTML=`<div class="loading">Error: ${e.message}</div>`;}
+}
+loadZones();
+</script>
+</body>
+</html>

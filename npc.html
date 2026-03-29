@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPC - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a>
+    <a href="npcs.html" class="active">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <a href="npcs.html">NPCs</a><span>›</span>
+  <span id="breadcrumb-name">Loading...</span>
+</div>
+<div class="container">
+  <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading NPC...</div></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+const RARITY_CLASS={'Common':'rarity-Common','Uncommon':'rarity-Uncommon','Rare':'rarity-Rare','Very Rare':'rarity-Very Rare','Artifact':'rarity-Artifact','Sovereign':'rarity-Sovereign'};
+const FACTION={0:'Neutral',1:'Order',2:'Destruction'};
+const FACTION_CLASS={0:'faction-neutral',1:'faction-order',2:'faction-dest'};
+function getEntry(){return new URLSearchParams(window.location.search).get('entry');}
+
+function renderNPC(data){
+  const npc=data.npc;
+  const spawns=data.spawns||[];
+  const loot=data.loot||[];
+  const vendor=data.vendor_items||[];
+  const quests=data.quests_started||[];
+  const f=npc.faction||0;
+  const lvl=npc.minlevel===npc.maxlevel?npc.minlevel:`${npc.minlevel}–${npc.maxlevel}`;
+
+  document.getElementById('breadcrumb-name').textContent=npc.display_name||`NPC #${npc.entry}`;
+  document.title=`${npc.display_name} - WAR Database`;
+
+  const spawnRows=spawns.length
+    ?spawns.slice(0,20).map(s=>`<tr><td>${s.zone?.name||'Unknown'}</td><td>${s.worldx||'—'}</td><td>${s.worldy||'—'}</td></tr>`).join('')
+    :`<tr><td colspan="3"><div class="empty-state">No spawn data found</div></td></tr>`;
+
+  const lootRows=loot.length
+    ?loot.map(i=>`<tr>
+      <td><a class="link ${RARITY_CLASS[i.rarity_name]||''}" href="item.html?entry=${i.entry}">${i.display_name}</a></td>
+      <td class="${RARITY_CLASS[i.rarity_name]||''}">${i.rarity_name}</td>
+      <td>${i.drop_chance?parseFloat(i.drop_chance).toFixed(2)+'%':'—'}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="3"><div class="empty-state">No loot data found</div></td></tr>`;
+
+  const vendorRows=vendor.length
+    ?vendor.map(i=>`<tr>
+      <td><a class="link ${RARITY_CLASS[i.rarity_name]||''}" href="item.html?entry=${i.entry}">${i.display_name}</a></td>
+      <td class="${RARITY_CLASS[i.rarity_name]||''}">${i.rarity_name}</td>
+      <td>${i.price?i.price.toLocaleString():'—'}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="3"><div class="empty-state">Not a vendor</div></td></tr>`;
+
+  const questRows=quests.length
+    ?quests.map(q=>`<tr>
+      <td><a class="link" href="quest.html?entry=${q.entry}">${q.display_name}</a></td>
+      <td>${q.level||'—'}</td>
+      <td>${q.xp?q.xp.toLocaleString():'—'}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="3"><div class="empty-state">No quests</div></td></tr>`;
+
+  document.getElementById('content').innerHTML=`
+    <div class="entity-header">
+      <div class="entity-name">${npc.display_name}</div>
+      <div class="entity-meta">
+        <span>Level <strong>${lvl||'?'}</strong></span>
+        <span class="${FACTION_CLASS[f]}">⚑ ${FACTION[f]||'Neutral'}</span>
+        ${npc.creaturetype?`<span>Type ${npc.creaturetype}</span>`:''}
+        <span style="color:var(--text-muted);font-size:12px">Entry #${npc.entry}</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Spawn Locations</span><span class="panel-count">${spawns.length}</span></div>
+      <table><thead><tr><th>Zone</th><th>X</th><th>Y</th></tr></thead><tbody>${spawnRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Loot Table</span><span class="panel-count">${loot.length}</span></div>
+      <table><thead><tr><th>Item</th><th>Rarity</th><th>Drop Chance</th></tr></thead><tbody>${lootRows}</tbody></table>
+    </div>
+    ${vendor.length?`<div class="panel">
+      <div class="panel-header"><span class="panel-title">Vendor Items</span><span class="panel-count">${vendor.length}</span></div>
+      <table><thead><tr><th>Item</th><th>Rarity</th><th>Price</th></tr></thead><tbody>${vendorRows}</tbody></table>
+    </div>`:''}
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Quests Started</span><span class="panel-count">${quests.length}</span></div>
+      <table><thead><tr><th>Quest</th><th>Level</th><th>XP</th></tr></thead><tbody>${questRows}</tbody></table>
+    </div>`;
+}
+
+async function load(){
+  const entry=getEntry();
+  if(!entry){document.getElementById('content').innerHTML=`<div class="error-box">No NPC entry specified.</div>`;return;}
+  try{
+    const res=await fetch(`${API}/npc/${entry}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderNPC(await res.json());
+  }catch(e){document.getElementById('content').innerHTML=`<div class="error-box">Failed to load NPC: ${e.message}</div>`;}
+}
+load();
+</script>
+</body>
+</html>

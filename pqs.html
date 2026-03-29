@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Quests - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a><a href="zones.html">Zones</a>
+    <a href="pqs.html" class="active">Public Quests</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="page-title">Public Quests</div>
+  <div class="filters">
+    <input class="filter-input" type="text" id="search" placeholder="Search public quests..." onkeydown="if(event.key==='Enter')loadPQs()">
+    <button class="btn" onclick="loadPQs()">Filter</button>
+  </div>
+</div>
+<div class="container-full">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Level</th><th>Zone</th></tr></thead>
+      <tbody id="pqs-body"><tr><td colspan="3"><div class="loading-inline"><span class="spinner"></span>Loading...</div></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+let allPQs=[];
+let currentPage=1;
+const LIMIT=50;
+let zoneCache={};
+
+async function loadPQs(){
+  const search=document.getElementById('search').value.trim();
+  let url=`${API}/pqs`;
+  if(search) url+=`?search=${encodeURIComponent(search)}`;
+  document.getElementById('pqs-body').innerHTML=`<tr><td colspan="3"><div class="loading-inline"><span class="spinner"></span>Loading...</div></td></tr>`;
+  try{
+    allPQs=await(await fetch(url)).json();
+    const zones=await(await fetch(`${API}/zones`)).json();
+    zones.forEach(z=>{zoneCache[z.zoneid]=z.display_name;});
+    renderPage(1);
+  }catch(e){document.getElementById('pqs-body').innerHTML=`<tr><td colspan="3"><div class="loading">Error: ${e.message}</div></td></tr>`;}
+}
+
+function renderPage(page){
+  currentPage=page;
+  const start=(page-1)*LIMIT;
+  const rows=allPQs.slice(start,start+LIMIT);
+  if(!rows.length){document.getElementById('pqs-body').innerHTML=`<tr><td colspan="3"><div class="loading">No public quests found</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
+  document.getElementById('pqs-body').innerHTML=rows.map(pq=>`<tr>
+    <td><a class="pq-link" href="pq.html?entry=${pq.entry}">${pq.pq_name||pq.display_name}</a></td>
+    <td>${pq.level?`<span class="badge">${pq.level}</span>`:'—'}</td>
+    <td>${pq.zoneid?zoneCache[pq.zoneid]||`Zone ${pq.zoneid}`:'—'}</td>
+  </tr>`).join('');
+  const totalPages=Math.ceil(allPQs.length/LIMIT);
+  document.getElementById('pagination').innerHTML=`
+    <button class="page-btn" onclick="renderPage(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+    <span class="page-info">Page ${page} of ${totalPages}</span>
+    <button class="page-btn" onclick="renderPage(${page+1})" ${page>=totalPages?'disabled':''}>Next →</button>`;
+}
+loadPQs();
+</script>
+</body>
+</html>

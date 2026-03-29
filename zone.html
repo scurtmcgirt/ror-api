@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zone - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html" class="active">Zones</a>
+    <a href="pqs.html">Public Quests</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <a href="zones.html">Zones</a><span>›</span>
+  <span id="breadcrumb-name">Loading...</span>
+</div>
+<div class="container">
+  <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading zone...</div></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+const FACTION={0:'Neutral',1:'Order',2:'Destruction'};
+const FACTION_CLASS={0:'faction-neutral',1:'faction-order',2:'faction-dest'};
+function getZoneId(){return new URLSearchParams(window.location.search).get('zoneid');}
+
+function renderZone(data){
+  const z=data.zone;
+  const npcs=data.npcs||[];
+  const pqs=data.public_quests||[];
+  const chapters=data.chapters||[];
+
+  document.getElementById('breadcrumb-name').textContent=z.display_name||`Zone #${z.zoneid}`;
+  document.title=`${z.display_name} - WAR Database`;
+
+  const npcRows=npcs.length
+    ?npcs.map(n=>{
+      const f=n.faction||0;
+      const lvl=n.minlevel===n.maxlevel?n.minlevel:`${n.minlevel}–${n.maxlevel}`;
+      return `<tr>
+        <td><a class="link" href="npc.html?entry=${n.entry}">${n.display_name}</a></td>
+        <td>${n.minlevel?`<span class="badge">${lvl}</span>`:'—'}</td>
+        <td class="${FACTION_CLASS[f]}">${FACTION[f]||'Neutral'}</td>
+      </tr>`;
+    }).join('')
+    :`<tr><td colspan="3"><div class="empty-state">No NPCs found</div></td></tr>`;
+
+  const pqRows=pqs.length
+    ?pqs.map(p=>`<tr>
+      <td><a class="link" href="pq.html?entry=${p.entry}">${p.display_name}</a></td>
+      <td>${p.level?`<span class="badge">${p.level}</span>`:'—'}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="2"><div class="empty-state">No public quests</div></td></tr>`;
+
+  const chapterRows=chapters.length
+    ?chapters.map(c=>`<tr>
+      <td>${c.display_name}</td>
+      <td>${c.chapterrank||'—'}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="2"><div class="empty-state">No chapters</div></td></tr>`;
+
+  document.getElementById('content').innerHTML=`
+    <div class="entity-header">
+      <div class="entity-name">${z.display_name}</div>
+      <div class="entity-meta">
+        <span>Tier <strong>${z.tier||'?'}</strong></span>
+        <span>Levels <strong>${z.minlevel||'?'}–${z.maxlevel||'?'}</strong></span>
+        ${z.region?`<span>Region ${z.region}</span>`:''}
+        <span style="color:var(--text-muted);font-size:12px">${data.npc_spawn_count||0} NPC spawns</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">NPCs</span><span class="panel-count">${npcs.length}${data.npc_spawn_count>npcs.length?' of '+data.npc_spawn_count:''}</span></div>
+      <table><thead><tr><th>Name</th><th>Level</th><th>Faction</th></tr></thead><tbody>${npcRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Public Quests</span><span class="panel-count">${pqs.length}</span></div>
+      <table><thead><tr><th>Name</th><th>Level</th></tr></thead><tbody>${pqRows}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Chapters</span><span class="panel-count">${chapters.length}</span></div>
+      <table><thead><tr><th>Name</th><th>Rank</th></tr></thead><tbody>${chapterRows}</tbody></table>
+    </div>`;
+}
+
+async function load(){
+  const zoneid=getZoneId();
+  if(!zoneid){document.getElementById('content').innerHTML=`<div class="error-box">No zone ID specified.</div>`;return;}
+  try{
+    const res=await fetch(`${API}/zone/${zoneid}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderZone(await res.json());
+  }catch(e){document.getElementById('content').innerHTML=`<div class="error-box">Failed to load zone: ${e.message}</div>`;}
+}
+load();
+</script>
+</body>
+</html>

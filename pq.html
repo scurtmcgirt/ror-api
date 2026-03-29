@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Quest - WAR: Return of Reckoning Database</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a><a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a><a href="zones.html">Zones</a>
+    <a href="pqs.html" class="active">Public Quests</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <a href="pqs.html">Public Quests</a><span>›</span>
+  <span id="breadcrumb-name">Loading...</span>
+</div>
+<div class="container">
+  <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading public quest...</div></div>
+</div>
+<script>
+const API='https://ror-api-production-acc5.up.railway.app';
+function getEntry(){return new URLSearchParams(window.location.search).get('entry');}
+
+function renderPQ(data){
+  const pq=data.pq;
+  const zone=data.zone;
+  const objectives=data.objectives||[];
+  const spawns=data.spawns||[];
+  const name=pq.display_name||pq.pq_name||`PQ #${pq.entry}`;
+
+  document.getElementById('breadcrumb-name').textContent=name;
+  document.title=`${name} - WAR Database`;
+
+  const stages={};
+  objectives.forEach(o=>{const s=o.stage||1;if(!stages[s])stages[s]=[];stages[s].push(o);});
+
+  let objHtml='';
+  if(Object.keys(stages).length){
+    Object.keys(stages).sort((a,b)=>a-b).forEach(stage=>{
+      stages[stage].forEach(o=>{
+        objHtml+=`<tr><td><span class="stage-badge">Stage ${stage}</span>${o.stagename||''}</td><td>${o.description||'—'}</td><td>${o.count||'—'}</td></tr>`;
+      });
+    });
+  } else {
+    objHtml=`<tr><td colspan="3"><div class="empty-state">No objectives found</div></td></tr>`;
+  }
+
+  const spawnRows=spawns.length
+    ?spawns.slice(0,20).map(s=>`<tr><td>${s.objective||'—'}</td><td>${s.worldx||'—'}</td><td>${s.worldy||'—'}</td></tr>`).join('')
+    :`<tr><td colspan="3"><div class="empty-state">No spawn data found</div></td></tr>`;
+
+  document.getElementById('content').innerHTML=`
+    <div class="entity-header">
+      <div class="entity-name">${name}</div>
+      <div class="entity-meta">
+        ${pq.level?`<span>Level <strong>${pq.level}</strong></span>`:''}
+        ${zone?`<span>📍 ${zone.name||zone.display_name||''}</span>`:''}
+        ${zone?.tier?`<span>Tier ${zone.tier}</span>`:''}
+        <span style="color:var(--text-muted);font-size:12px">Entry #${pq.entry}</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Objectives</span><span class="panel-count">${objectives.length}</span></div>
+      <table><thead><tr><th>Stage</th><th>Description</th><th>Count</th></tr></thead><tbody>${objHtml}</tbody></table>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Spawn Locations</span><span class="panel-count">${spawns.length}</span></div>
+      <table><thead><tr><th>Objective</th><th>X</th><th>Y</th></tr></thead><tbody>${spawnRows}</tbody></table>
+    </div>`;
+}
+
+async function load(){
+  const entry=getEntry();
+  if(!entry){document.getElementById('content').innerHTML=`<div class="error-box">No PQ entry specified.</div>`;return;}
+  try{
+    const res=await fetch(`${API}/pq/${entry}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderPQ(await res.json());
+  }catch(e){document.getElementById('content').innerHTML=`<div class="error-box">Failed to load public quest: ${e.message}</div>`;}
+}
+load();
+</script>
+</body>
+</html>
