@@ -64,18 +64,19 @@
   /* ── ICON + LABEL ── */
   .item-icon-row {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 0;
   }
 
   .item-icon {
-    width: 56px;
-    height: 56px;
+    width: 180px;
+    height: 180px;
     border: 2px solid var(--border-red);
     background: var(--bg4);
     image-rendering: pixelated;
     flex-shrink: 0;
-    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+    box-shadow: 0 0 12px rgba(0,0,0,0.8);
   }
 
   .item-icon-label {
@@ -84,6 +85,8 @@
     font-style: italic;
     font-family: 'Crimson Text', serif;
     letter-spacing: 0.04em;
+    text-align: center;
+    margin-top: 6px;
   }
 
   /* ── ITEM INFO PANEL ── */
@@ -155,10 +158,8 @@
       border-bottom: 1px solid var(--border-red);
       min-height: auto;
       padding: 16px;
-      flex-direction: row;
-      justify-content: flex-start;
     }
-    .item-3d-render { width: 120px; height: 120px; }
+    .item-icon { width: 120px; height: 120px; }
     .render-placeholder { width: 120px; height: 120px; }
   }
 </style>
@@ -269,15 +270,14 @@ function renderItem(data) {
         ${iconHtml}
         <span class="item-icon-label">${data.slot_name||data.type_name||''}</span>
       </div>`
-    : '';
+    : `<div class="render-placeholder">No icon available</div>`;
 
   document.getElementById('content').innerHTML = `
     <div class="entity-header" style="padding:0;overflow:hidden;">
       <div class="item-layout">
 
-        <!-- Left: 3D render + icon -->
+        <!-- Left: icon display -->
         <div class="item-render-panel">
-          ${renderHtml}
           ${iconLabelHtml}
         </div>
 
