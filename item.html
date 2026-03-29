@@ -110,6 +110,67 @@
     font-size: 11px; letter-spacing: 0.1em;
     color: var(--yellow); text-transform: uppercase; margin-bottom: 8px;
   }
+  /* Pending overlay */
+  .ss-pending-overlay {
+    width: 180px;
+    height: 180px;
+    border: 1px solid var(--yellow-dark);
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .ss-pending-overlay .ss-pending-icon { font-size: 32px; }
+  .ss-pending-overlay .ss-pending-text {
+    font-size: 12px;
+    color: var(--yellow-dim);
+    font-style: italic;
+    font-family: 'Crimson Text', serif;
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 12px;
+  }
+  .ss-pending-overlay .ss-replace-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-style: italic;
+    cursor: pointer;
+  }
+  .ss-pending-overlay .ss-replace-hint:hover { color: var(--yellow); text-decoration: underline; }
+
+  /* Lightbox */
+  .ss-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+  }
+  .ss-lightbox.active { display: flex; }
+  .ss-lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border: 1px solid var(--border-red);
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+    cursor: default;
+  }
+  .ss-lightbox-close {
+    position: fixed;
+    top: 20px; right: 24px;
+    font-size: 28px;
+    color: var(--text-dim);
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10000;
+  }
+  .ss-lightbox-close:hover { color: var(--yellow); }
+
   @media (max-width: 640px) {
     .item-layout { grid-template-columns: 1fr; }
     .item-render-panel {
@@ -142,6 +203,12 @@
   <div id="content"><div class="loading-inline"><span class="spinner"></span>Loading item...</div></div>
 </div>
 <input type="file" id="screenshot-file-input" accept="image/*">
+
+<!-- Lightbox -->
+<div class="ss-lightbox" id="ss-lightbox">
+  <span class="ss-lightbox-close" id="ss-lightbox-close">✕</span>
+  <img id="ss-lightbox-img" src="" alt="screenshot fullsize">
+</div>
 
 <script>
 const API          = 'https://ror-api-production-acc5.up.railway.app';
@@ -202,34 +269,63 @@ async function initScreenshot(entry) {
   const status   = document.getElementById('ss-status');
   const fileInput= document.getElementById('screenshot-file-input');
 
-  function showImage(url, isPending=false) {
-    img.src = url;
-    img.style.display = 'block';
-    label.style.display = 'none';
-    if (badge) badge.style.display = isPending ? 'block' : 'none';
-  }
-
-  function showUpload() {
-    img.style.display = 'none';
-    label.style.display = 'flex';
-    if (badge) badge.style.display = 'none';
-  }
-
-  function setStatus(msg, color='var(--text-muted)') {
-    status.textContent = msg;
-    status.style.color = color;
-  }
-
-  // Check approved first, then pending
-  setStatus('');
   const approvedUrl = `${STORAGE_PUB}/approved/${entry}.png`;
   const pendingUrl  = `${STORAGE_PUB}/pending/${entry}.png`;
 
+  // Lightbox setup
+  const lightbox     = document.getElementById('ss-lightbox');
+  const lightboxImg  = document.getElementById('ss-lightbox-img');
+  const lightboxClose= document.getElementById('ss-lightbox-close');
+
+  function openLightbox(url) {
+    lightboxImg.src = url;
+    lightbox.classList.add('active');
+  }
+  lightbox.addEventListener('click', (e) => { if(e.target === lightbox) lightbox.classList.remove('active'); });
+  lightboxClose.addEventListener('click', () => lightbox.classList.remove('active'));
+  document.addEventListener('keydown', (e) => { if(e.key==='Escape') lightbox.classList.remove('active'); });
+
+  function showApproved(url) {
+    area.innerHTML = `<img class="screenshot-img" src="${url}" alt="screenshot" style="cursor:zoom-in" title="Click to view full size">`;
+    area.querySelector('img').addEventListener('click', () => openLightbox(url));
+    label.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    if (status) status.textContent = '';
+  }
+
+  function showPending() {
+    area.innerHTML = `
+      <div class="ss-pending-overlay">
+        <span class="ss-pending-icon">⏳</span>
+        <span class="ss-pending-text">Screenshot Pending Review</span>
+        <span class="ss-replace-hint" id="ss-replace-link">Submit a different one?</span>
+      </div>`;
+    document.getElementById('ss-replace-link').addEventListener('click', () => fileInput.click());
+    label.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    if (status) { status.textContent = 'Awaiting moderator approval'; status.style.color = 'var(--yellow-dim)'; }
+  }
+
+  function showUpload() {
+    area.innerHTML = `
+      <label class="screenshot-upload-label" id="ss-label">
+        <span class="screenshot-upload-icon">📷</span>
+        <span class="screenshot-upload-text">Click or drag to upload<br>a screenshot</span>
+      </label>`;
+    document.getElementById('ss-label').addEventListener('click', () => fileInput.click());
+    if (badge) badge.style.display = 'none';
+    if (status) status.textContent = '';
+  }
+
+  function setStatus(msg, color='var(--text-muted)') {
+    if (status) { status.textContent = msg; status.style.color = color; }
+  }
+
+  // Check approved first, then pending
   if (await urlExists(approvedUrl)) {
-    showImage(approvedUrl);
+    showApproved(approvedUrl);
   } else if (await urlExists(pendingUrl)) {
-    showImage(pendingUrl + '?t=' + Date.now(), true);
-    setStatus('Awaiting approval', 'var(--yellow-dim)');
+    showPending();
   } else {
     showUpload();
   }
@@ -239,9 +335,9 @@ async function initScreenshot(entry) {
     setStatus('Uploading...', 'var(--yellow)');
     try {
       await uploadToStorage(`pending/${entry}.png`, file);
-      showImage(pendingUrl + '?t=' + Date.now(), true);
-      setStatus('Submitted! Awaiting approval.', '#4fc34f');
-      setTimeout(() => setStatus('Awaiting approval', 'var(--yellow-dim)'), 3000);
+      showPending();
+      setStatus('Submitted! Awaiting moderator approval.', '#4fc34f');
+      setTimeout(() => setStatus('Awaiting moderator approval', 'var(--yellow-dim)'), 3000);
     } catch(e) {
       setStatus('Upload failed. Try again.', '#e88');
       console.error(e);
@@ -249,26 +345,11 @@ async function initScreenshot(entry) {
     fileInput.value = '';
   }
 
-  // Click label to upload
-  label.addEventListener('click', () => fileInput.click());
-
-  // Click pending image to replace
-  img.addEventListener('click', () => {
-    if (badge && badge.style.display !== 'none') fileInput.click();
-  });
-  img.style.cursor = 'pointer';
-  img.title = 'Click to submit a new screenshot';
-
   fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
 
-  // Drag and drop
-  area.addEventListener('dragover', (e) => { e.preventDefault(); if(label.style.display!=='none') label.style.borderColor='var(--red)'; });
-  area.addEventListener('dragleave', () => { label.style.borderColor=''; });
-  area.addEventListener('drop', (e) => {
-    e.preventDefault();
-    label.style.borderColor='';
-    handleFile(e.dataTransfer.files[0]);
-  });
+  // Drag and drop on the whole panel
+  area.addEventListener('dragover', (e) => { e.preventDefault(); });
+  area.addEventListener('drop', (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); });
 }
 
 function renderItem(data) {
