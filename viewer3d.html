@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Item Viewer - WAR: Return of Reckoning</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { overflow: hidden; }
+
+  .viewer-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: calc(100vh - 52px - 41px); /* nav + breadcrumb */
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border-red);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-red);
+    background: var(--bg3);
+    flex-shrink: 0;
+  }
+
+  .sidebar-title {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .sidebar-select {
+    width: 100%;
+    background: var(--bg4);
+    border: 1px solid var(--border-red);
+    color: var(--text-bright);
+    padding: 6px 10px;
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+
+  .sidebar-select:focus { border-color: var(--red); }
+  option { background: var(--bg3); }
+
+  .item-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .item-list::-webkit-scrollbar { width: 4px; }
+  .item-list::-webkit-scrollbar-track { background: var(--bg2); }
+  .item-list::-webkit-scrollbar-thumb { background: var(--border-red); }
+
+  .item-entry {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .item-entry:hover { background: var(--bg3); color: var(--text-bright); }
+  .item-entry.active { background: rgba(191,74,6,0.15); color: var(--yellow); border-left: 2px solid var(--red); padding-left: 14px; }
+
+  .item-icon-small {
+    width: 24px; height: 24px;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  .item-entry-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-entry-rank  { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+  .item-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 16px;
+    font-style: italic;
+  }
+
+  /* ── VIEWER ── */
+  .viewer-main {
+    display: flex;
+    flex-direction: column;
+    background: #080600;
+    position: relative;
+  }
+
+  #three-canvas {
+    flex: 1;
+    width: 100%;
+    display: block;
+  }
+
+  .viewer-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .viewer-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  .viewer-hint .hint-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
+
+  .viewer-controls {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    pointer-events: all;
+  }
+
+  .ctrl-btn {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid var(--border-red);
+    color: var(--text-dim);
+    padding: 5px 12px;
+    font-family: 'Crimson Text', serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .ctrl-btn:hover { border-color: var(--red); color: var(--text-bright); }
+
+  .viewer-info {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--border-red);
+    padding: 10px 14px;
+    max-width: 240px;
+  }
+
+  .viewer-item-name {
+    font-family: 'MedievalSharp', cursive;
+    font-size: 14px;
+    color: var(--yellow);
+    margin-bottom: 4px;
+  }
+
+  .viewer-item-meta { font-size: 12px; color: var(--text-dim); font-style: italic; }
+
+  .loading-spin {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  .loading-spin .spinner {
+    width: 24px; height: 24px;
+    margin: 0 auto 10px;
+  }
+
+  /* Drag hint */
+  .drag-hint {
+    position: absolute;
+    bottom: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">☠ WAR: RoR Database</a>
+  <div class="nav-links">
+    <a href="items.html">Items</a>
+    <a href="viewer3d.html" class="active">3D Viewer</a>
+    <a href="npcs.html">NPCs</a>
+    <a href="quests.html">Quests</a>
+    <a href="zones.html">Zones</a>
+  </div>
+</nav>
+<div class="breadcrumb">
+  <a href="index.html">Home</a><span>›</span>
+  <span>3D Item Viewer</span>
+</div>
+
+<div class="viewer-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Browse Items</div>
+      <select class="sidebar-select" id="sel-career">
+        <option value="">— Select Career —</option>
+      </select>
+      <select class="sidebar-select" id="sel-slot">
+        <option value="">— All Slots —</option>
+      </select>
+      <select class="sidebar-select" id="sel-rarity">
+        <option value="">— All Rarities —</option>
+        <option value="0">Common</option>
+        <option value="1">Uncommon</option>
+        <option value="2">Rare</option>
+        <option value="3">Very Rare</option>
+        <option value="4">Artifact</option>
+      </select>
+    </div>
+    <div class="item-count" id="item-count"></div>
+    <div class="item-list" id="item-list">
+      <div style="padding:24px;text-align:center;color:var(--text-muted);font-style:italic;font-size:13px;">
+        Select a career to browse items
+      </div>
+    </div>
+  </div>
+
+  <!-- 3D Viewport -->
+  <div class="viewer-main" id="viewer-main">
+    <canvas id="three-canvas"></canvas>
+
+    <div class="viewer-overlay" id="viewer-overlay">
+      <div class="viewer-hint">
+        <div class="hint-icon">⚔</div>
+        <div>Select an item from the list<br>to view it in 3D</div>
+      </div>
+    </div>
+
+    <div id="loading-overlay" style="display:none" class="loading-spin">
+      <div class="spinner"><span class="spinner"></span></div>
+      Loading model...
+    </div>
+
+    <div class="viewer-info" id="viewer-info" style="display:none">
+      <div class="viewer-item-name" id="vi-name"></div>
+      <div class="viewer-item-meta" id="vi-meta"></div>
+    </div>
+
+    <div class="drag-hint" id="drag-hint" style="display:none">
+      Left drag: rotate &nbsp;·&nbsp; Right drag / scroll: zoom &nbsp;·&nbsp; Middle drag: pan
+    </div>
+
+    <div class="viewer-controls" id="viewer-controls" style="display:none">
+      <button class="ctrl-btn" id="btn-reset">Reset view</button>
+      <button class="ctrl-btn" id="btn-wireframe">Wireframe</button>
+      <button class="ctrl-btn" id="btn-bodyonly">Body only</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const API          = 'https://ror-api-production-acc5.up.railway.app';
+const SUPABASE_URL = 'https://rmihmhpoistwtnbcecli.supabase.co';
+const MODELS_URL   = `${SUPABASE_URL}/storage/v1/object/public/models`;
+const ICONS_URL    = `${SUPABASE_URL}/storage/v1/object/public/icons`;
+
+// ── Career definitions ──────────────────────────────────────
+const CAREERS = [
+  // Order
+  { id: 8,  name: 'Rune Priest',    race: 'dwm', realm: 'Order' },
+  { id: 9,  name: 'Engineer',       race: 'dwm', realm: 'Order' },
+  { id: 10, name: 'Ironbreaker',    race: 'dwm', realm: 'Order' },
+  { id: 11, name: 'Slayer',         race: 'dwm', realm: 'Order' },
+  { id: 3,  name: 'Warrior Priest', race: 'emm', realm: 'Order' },
+  { id: 2,  name: 'Bright Wizard',  race: 'emm', realm: 'Order' },
+  { id: 5,  name: 'Witch Hunter',   race: 'emm', realm: 'Order' },
+  { id: 7,  name: 'White Lion',     race: 'hem', realm: 'Order' },
+  { id: 4,  name: 'Shadow Warrior', race: 'hem', realm: 'Order' },
+  { id: 6,  name: 'Archmage',       race: 'hem', realm: 'Order' },
+  // Destruction
+  { id: 18, name: 'Black Orc',      race: 'orm', realm: 'Destruction' },
+  { id: 20, name: 'Squig Herder',   race: 'orm', realm: 'Destruction' },
+  { id: 19, name: 'Shaman',         race: 'orm', realm: 'Destruction' },
+  { id: 17, name: 'Chosen',         race: 'cwm', realm: 'Destruction' },
+  { id: 16, name: 'Marauder',       race: 'cwm', realm: 'Destruction' },
+  { id: 15, name: 'Zealot',         race: 'cwm', realm: 'Destruction' },
+  { id: 14, name: 'Witch Elf',      race: 'bem', realm: 'Destruction' },
+  { id: 13, name: 'Disciple',       race: 'bem', realm: 'Destruction' },
+  { id: 12, name: 'Sorceress',      race: 'dem', realm: 'Destruction' },
+];
+
+const RARITY_NAMES = ['Common','Uncommon','Rare','Very Rare','Artifact','Sovereign'];
+const RARITY_COLORS = { 0:'var(--common)',1:'var(--uncommon)',2:'var(--rare)',3:'var(--veryrare)',4:'var(--artifact)',5:'var(--sovereign)' };
+
+// ── Populate career dropdown ────────────────────────────────
+const selCareer = document.getElementById('sel-career');
+let lastGroup = '';
+CAREERS.forEach(c => {
+  if (c.realm !== lastGroup) {
+    const grp = document.createElement('optgroup');
+    grp.label = c.realm;
+    selCareer.appendChild(grp);
+    lastGroup = c.realm;
+  }
+  const opt = document.createElement('option');
+  opt.value = c.id;
+  opt.textContent = c.name;
+  selCareer.lastChild.appendChild(opt);
+});
+
+// ── Three.js setup ──────────────────────────────────────────
+const canvas   = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x080600, 1);
+renderer.shadowMap.enabled = true;
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+camera.position.set(1.5, 1.5, 3);
+camera.lookAt(0, 0.5, 0);
+
+// Lights
+const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambient);
+const key  = new THREE.DirectionalLight(0xfff5e0, 2.0);
+key.position.set(2, 4, 3);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xe0eeff, 0.8);
+fill.position.set(-3, 2, -2);
+scene.add(fill);
+const rim  = new THREE.DirectionalLight(0xffffff, 1.0);
+rim.position.set(0, -2, -4);
+scene.add(rim);
+
+// Materials
+const bodyMat = new THREE.MeshStandardMaterial({
+  color: 0x8a8a90, roughness: 0.7, metalness: 0.1
+});
+const itemMat = new THREE.MeshStandardMaterial({
+  color: 0xb8a070, roughness: 0.5, metalness: 0.3
+});
+const wireframeMat = new THREE.MeshBasicMaterial({ color: 0xbf4a06, wireframe: true });
+
+// Orbit controls (manual implementation for r128)
+let isWireframe = false;
+let bodyVisible = true;
+let isDragging  = false;
+let prevMouse   = { x: 0, y: 0 };
+let mouseBtn    = -1;
+let spherical   = { theta: 0.4, phi: 1.0, radius: 4 };
+let target      = new THREE.Vector3(0, 0.5, 0);
+
+function updateCamera() {
+  camera.position.x = target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  camera.position.y = target.y + spherical.radius * Math.cos(spherical.phi);
+  camera.position.z = target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.lookAt(target);
+}
+updateCamera();
+
+canvas.addEventListener('mousedown', e => { isDragging=true; mouseBtn=e.button; prevMouse={x:e.clientX,y:e.clientY}; e.preventDefault(); });
+window.addEventListener('mouseup',   () => { isDragging=false; mouseBtn=-1; });
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  prevMouse = { x: e.clientX, y: e.clientY };
+  if (mouseBtn === 0) {
+    spherical.theta -= dx * 0.008;
+    spherical.phi    = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi + dy * 0.008));
+  } else if (mouseBtn === 2) {
+    spherical.radius = Math.max(0.5, Math.min(20, spherical.radius - dy * 0.02));
+  } else if (mouseBtn === 1) {
+    const right = new THREE.Vector3();
+    const up    = new THREE.Vector3(0,1,0);
+    right.crossVectors(camera.position.clone().sub(target), up).normalize();
+    target.addScaledVector(right, -dx * 0.003 * spherical.radius * 0.1);
+    target.addScaledVector(up,     dy * 0.003 * spherical.radius * 0.1);
+  }
+  updateCamera();
+});
+canvas.addEventListener('wheel', e => {
+  spherical.radius = Math.max(0.5, Math.min(20, spherical.radius + e.deltaY * 0.005));
+  updateCamera();
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// Touch support
+let lastTouchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) { isDragging=true; mouseBtn=0; prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY}; }
+  if (e.touches.length === 2) { lastTouchDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend',   e => { isDragging=false; mouseBtn=-1; });
+canvas.addEventListener('touchmove',  e => {
+  if (e.touches.length === 1 && isDragging) {
+    const dx = e.touches[0].clientX - prevMouse.x;
+    const dy = e.touches[0].clientY - prevMouse.y;
+    prevMouse = {x:e.touches[0].clientX,y:e.touches[0].clientY};
+    spherical.theta -= dx * 0.008;
+    spherical.phi    = Math.max(0.1, Math.min(Math.PI-0.1, spherical.phi + dy * 0.008));
+    updateCamera();
+  }
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    spherical.radius = Math.max(0.5, Math.min(20, spherical.radius - (dist-lastTouchDist)*0.01));
+    lastTouchDist = dist;
+    updateCamera();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+// Resize
+function resize() {
+  const main = document.getElementById('viewer-main');
+  const w = main.clientWidth, h = main.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(document.getElementById('viewer-main'));
+resize();
+
+// Animate
+function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
+animate();
+
+// ── OBJ loader (simple, no MTL) ────────────────────────────
+async function loadOBJ(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+
+  const positions = [], normals = [], uvs = [];
+  const verts = [];
+
+  for (const line of text.split('\n')) {
+    const parts = line.trim().split(/\s+/);
+    if (parts[0] === 'v')  positions.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
+    else if (parts[0] === 'vn') normals.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
+    else if (parts[0] === 'vt') uvs.push(parseFloat(parts[1]), parseFloat(parts[2]));
+    else if (parts[0] === 'f') {
+      const face = parts.slice(1).map(p => {
+        const [vi, ti, ni] = p.split('/').map(x => parseInt(x)||0);
+        return { vi: vi-1, ti: ti-1, ni: ni-1 };
+      });
+      // Triangulate
+      for (let i = 1; i < face.length-1; i++) {
+        [face[0], face[i], face[i+1]].forEach(({vi,ti,ni}) => {
+          verts.push(
+            positions[vi*3], positions[vi*3+1], positions[vi*3+2],
+            ni>=0 ? normals[ni*3] : 0, ni>=0 ? normals[ni*3+1] : 1, ni>=0 ? normals[ni*3+2] : 0,
+          );
+        });
+      }
+    }
+  }
+
+  const buf  = new THREE.BufferGeometry();
+  const arr  = new Float32Array(verts);
+  buf.setAttribute('position', new THREE.BufferAttribute(arr.filter((_,i)=>i%6<3), 3));
+  buf.setAttribute('normal',   new THREE.BufferAttribute(arr.filter((_,i)=>i%6>=3), 3));
+  buf.computeBoundingBox();
+  return buf;
+}
+
+// ── Scene state ─────────────────────────────────────────────
+let bodyMeshes = [];
+let itemMeshes = [];
+let currentRace = '';
+
+function clearItem() {
+  itemMeshes.forEach(m => scene.remove(m));
+  itemMeshes = [];
+}
+
+function clearAll() {
+  clearItem();
+  bodyMeshes.forEach(m => scene.remove(m));
+  bodyMeshes = [];
+}
+
+async function loadBody(race) {
+  if (race === currentRace) return;
+  clearAll();
+  currentRace = race;
+
+  const bodyUrl = `${MODELS_URL}/fg.0.0.${race}_base_body_01.obj`;
+  const headUrl = `${MODELS_URL}/fg.0.0.${race}_base_head_a_01.obj`;
+
+  for (const url of [bodyUrl, headUrl]) {
+    try {
+      const geo  = await loadOBJ(url);
+      const mesh = new THREE.Mesh(geo, bodyMat);
+      scene.add(mesh);
+      bodyMeshes.push(mesh);
+    } catch(e) { /* head may not exist */ }
+  }
+}
+
+async function loadItem(geomStem) {
+  clearItem();
+  const url = `${MODELS_URL}/${geomStem}.obj`;
+  try {
+    const geo  = await loadOBJ(url);
+    const mesh = new THREE.Mesh(geo, isWireframe ? wireframeMat : itemMat);
+    scene.add(mesh);
+    itemMeshes.push(mesh);
+  } catch(e) {
+    console.warn('Item model not found:', url);
+  }
+}
+
+function resetView() {
+  spherical = { theta: 0.4, phi: 1.0, radius: 4 };
+  target    = new THREE.Vector3(0, 0.5, 0);
+  updateCamera();
+}
+
+// ── Controls ────────────────────────────────────────────────
+document.getElementById('btn-reset').addEventListener('click', resetView);
+
+document.getElementById('btn-wireframe').addEventListener('click', () => {
+  isWireframe = !isWireframe;
+  const mat = isWireframe ? wireframeMat : itemMat;
+  itemMeshes.forEach(m => m.material = mat);
+  document.getElementById('btn-wireframe').textContent = isWireframe ? 'Solid' : 'Wireframe';
+});
+
+document.getElementById('btn-bodyonly').addEventListener('click', () => {
+  bodyVisible = !bodyVisible;
+  bodyMeshes.forEach(m => m.visible = bodyVisible);
+  document.getElementById('btn-bodyonly').textContent = bodyVisible ? 'Body only' : 'Item only';
+});
+
+// ── Item browser ────────────────────────────────────────────
+let currentItems = [];
+let currentCareer = null;
+
+const selSlot   = document.getElementById('sel-slot');
+const selRarity = document.getElementById('sel-rarity');
+const itemList  = document.getElementById('item-list');
+const itemCount = document.getElementById('item-count');
+
+// Populate slot dropdown
+const SLOTS = ['HEAD','HELM','BODY','CHEST','SHOULDER','SHOU','GLOVE','GLOV','HAND',
+  'BOOT','FOOT','BELT','WAIST','BACK','CLOAK','RGHT','LEFT','EITHER','NECK','FINGER'];
+
+SLOTS.forEach(s => {
+  const o = document.createElement('option');
+  o.value = s; o.textContent = s;
+  selSlot.appendChild(o);
+});
+
+selCareer.addEventListener('change', async () => {
+  const careerId = parseInt(selCareer.value);
+  const career   = CAREERS.find(c => c.id === careerId);
+  if (!career) { itemList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-style:italic;font-size:13px;">Select a career to browse items</div>'; return; }
+
+  currentCareer = career;
+  itemList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-style:italic;font-size:13px;">Loading items...</div>';
+  itemCount.textContent = '';
+
+  // Load body for this career
+  loadBody(career.race);
+
+  // Fetch items for this career
+  const res = await fetch(`${API}/items?career=${careerId}&limit=200`);
+  const data = await res.json();
+
+  currentItems = data.filter(it => it.display_name);
+  renderItemList();
+});
+
+selSlot.addEventListener('change',   renderItemList);
+selRarity.addEventListener('change', renderItemList);
+
+function renderItemList() {
+  let items = currentItems;
+
+  const slot   = selSlot.value;
+  const rarity = selRarity.value;
+  if (slot)   items = items.filter(it => (it.slot_name||'').toUpperCase() === slot);
+  if (rarity) items = items.filter(it => it.rarity == rarity);
+
+  // Sort by rank then name
+  items.sort((a,b) => (a.minrank||0)-(b.minrank||0) || (a.display_name||'').localeCompare(b.display_name||''));
+
+  itemCount.textContent = `${items.length} item${items.length!==1?'s':''}`;
+
+  if (!items.length) {
+    itemList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-style:italic;font-size:13px;">No items found</div>';
+    return;
+  }
+
+  itemList.innerHTML = items.map((it,i) => {
+    const icon = it.iconid ? `<img class="item-icon-small" src="${ICONS_URL}/icon_${it.iconid}.png" onerror="this.style.display='none'" alt="">` : '';
+    const rCol = RARITY_COLORS[it.rarity] || 'var(--text)';
+    const rank = it.minrank ? `R${it.minrank}` : '';
+    return `<div class="item-entry" data-index="${i}" onclick="selectItem(${i})">
+      ${icon}
+      <span class="item-entry-name" style="color:${rCol}">${it.display_name}</span>
+      <span class="item-entry-rank">${rank}</span>
+    </div>`;
+  }).join('');
+
+  // Store for selection
+  window._items = items;
+}
+
+window.selectItem = async function(index) {
+  const item = window._items[index];
+  if (!item) return;
+
+  // Highlight
+  document.querySelectorAll('.item-entry').forEach((el,i) => el.classList.toggle('active', i===index));
+
+  // Show loading
+  document.getElementById('viewer-overlay').style.display = 'none';
+  document.getElementById('loading-overlay').style.display = 'block';
+  document.getElementById('viewer-info').style.display     = 'none';
+
+  // Load item model
+  // model_image is like "fg.0.0.dwm_armor_hvy_01.png" → stem is the geom name
+  if (item.model_image) {
+    const geomStem = item.model_image.replace(/\.png$/, '');
+    await loadItem(geomStem);
+  } else {
+    clearItem();
+  }
+
+  // Show info
+  document.getElementById('loading-overlay').style.display = 'none';
+  document.getElementById('viewer-info').style.display     = 'block';
+  document.getElementById('viewer-controls').style.display = 'flex';
+  document.getElementById('drag-hint').style.display       = 'block';
+  document.getElementById('vi-name').textContent  = item.display_name;
+  document.getElementById('vi-meta').textContent  =
+    [RARITY_NAMES[item.rarity], item.slot_name, item.minrank ? `Rank ${item.minrank}` : '']
+    .filter(Boolean).join(' · ');
+
+  document.getElementById('vi-name').style.color = RARITY_COLORS[item.rarity] || 'var(--yellow)';
+};
+</script>
+</body>
+</html>
