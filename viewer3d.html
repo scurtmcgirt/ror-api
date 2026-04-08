@@ -292,28 +292,29 @@ const MODELS_URL   = `${SUPABASE_URL}/storage/v1/object/public/models`;
 const ICONS_URL    = `${SUPABASE_URL}/storage/v1/object/public/icons`;
 
 // ── Career definitions ──────────────────────────────────────
+// career field is a bitmask — each career = one bit
 const CAREERS = [
   // Order
-  { id: 8,  name: 'Rune Priest',    race: 'dwm', realm: 'Order' },
-  { id: 9,  name: 'Engineer',       race: 'dwm', realm: 'Order' },
-  { id: 10, name: 'Ironbreaker',    race: 'dwm', realm: 'Order' },
-  { id: 11, name: 'Slayer',         race: 'dwm', realm: 'Order' },
-  { id: 3,  name: 'Warrior Priest', race: 'emm', realm: 'Order' },
-  { id: 2,  name: 'Bright Wizard',  race: 'emm', realm: 'Order' },
-  { id: 5,  name: 'Witch Hunter',   race: 'emm', realm: 'Order' },
-  { id: 7,  name: 'White Lion',     race: 'hem', realm: 'Order' },
-  { id: 4,  name: 'Shadow Warrior', race: 'hem', realm: 'Order' },
-  { id: 6,  name: 'Archmage',       race: 'hem', realm: 'Order' },
+  { id: 32,   name: 'Rune Priest',    race: 'dwm', realm: 'Order' },
+  { id: 64,   name: 'Engineer',       race: 'dwm', realm: 'Order' },
+  { id: 1024, name: 'Ironbreaker',    race: 'dwm', realm: 'Order' },
+  { id: 2048, name: 'Slayer',         race: 'dwm', realm: 'Order' },
+  { id: 1,    name: 'Warrior Priest', race: 'emm', realm: 'Order' },
+  { id: 2,    name: 'Bright Wizard',  race: 'emm', realm: 'Order' },
+  { id: 262144, name: 'Witch Hunter', race: 'emm', realm: 'Order' },
+  { id: 8,    name: 'White Lion',     race: 'hem', realm: 'Order' },
+  { id: 4,    name: 'Shadow Warrior', race: 'hem', realm: 'Order' },
+  { id: 16,   name: 'Archmage',       race: 'hem', realm: 'Order' },
   // Destruction
-  { id: 18, name: 'Black Orc',      race: 'orm', realm: 'Destruction' },
-  { id: 20, name: 'Squig Herder',   race: 'orm', realm: 'Destruction' },
-  { id: 19, name: 'Shaman',         race: 'orm', realm: 'Destruction' },
-  { id: 17, name: 'Chosen',         race: 'cwm', realm: 'Destruction' },
-  { id: 16, name: 'Marauder',       race: 'cwm', realm: 'Destruction' },
-  { id: 15, name: 'Zealot',         race: 'cwm', realm: 'Destruction' },
-  { id: 14, name: 'Witch Elf',      race: 'bem', realm: 'Destruction' },
-  { id: 13, name: 'Disciple',       race: 'bem', realm: 'Destruction' },
-  { id: 12, name: 'Sorceress',      race: 'dem', realm: 'Destruction' },
+  { id: 512,  name: 'Black Orc',      race: 'orm', realm: 'Destruction' },
+  { id: 128,  name: 'Squig Herder',   race: 'orm', realm: 'Destruction' },
+  { id: 256,  name: 'Shaman',         race: 'orm', realm: 'Destruction' },
+  { id: 4096, name: 'Chosen',         race: 'cwm', realm: 'Destruction' },
+  { id: 8192, name: 'Marauder',       race: 'cwm', realm: 'Destruction' },
+  { id: 16384, name: 'Zealot',        race: 'cwm', realm: 'Destruction' },
+  { id: 32768, name: 'Witch Elf',     race: 'bem', realm: 'Destruction' },
+  { id: 65536, name: 'Disciple',      race: 'bem', realm: 'Destruction' },
+  { id: 131072, name: 'Sorceress',    race: 'dem', realm: 'Destruction' },
 ];
 
 const RARITY_NAMES = ['Common','Uncommon','Rare','Very Rare','Artifact','Sovereign'];
@@ -594,11 +595,20 @@ selCareer.addEventListener('change', async () => {
   // Load body for this career
   loadBody(career.race);
 
-  // Fetch items for this career
-  const res = await fetch(`${API}/items?career=${careerId}&limit=200`);
+  // Fetch items — career is a bitmask, filter client-side
+  // Fetch all items (career=0 or career includes this bit)
+  // Use limit=200, sorted by name
+  const res = await fetch(`${API}/items?limit=200&order=name.asc`);
   const data = await res.json();
 
-  currentItems = data.filter(it => it.display_name);
+  // Filter by career bitmask: item career == 0 (all careers) OR bit is set
+  currentItems = data.filter(it => {
+    if (!it.display_name) return false;
+    const c = it.career || 0;
+    // 0 = all careers, large values like 65536 used as "all" flag too
+    if (c === 0 || c === 65535 || c === 131071 || c === 262143) return true;
+    return (c & careerId) !== 0;
+  });
   renderItemList();
 });
 
