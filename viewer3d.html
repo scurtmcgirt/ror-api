@@ -628,6 +628,7 @@ selCareer.addEventListener('change', async () => {
   } catch(e) {
     itemList.innerHTML = `<div style="padding:24px;text-align:center;color:#e88;font-size:13px;">Failed to load items</div>`;
   }
+});
 
 selSlot.addEventListener('change',   renderItemList);
 selRarity.addEventListener('change', renderItemList);
