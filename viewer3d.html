@@ -266,7 +266,7 @@ const THREE = window.THREE || {};
 
 (function loadThree() {
   const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  script.src = 'https://unpkg.com/three@0.128.0/build/three.min.js';
   script.onload = initThree;
   document.head.appendChild(script);
 })();
